@@ -1,0 +1,116 @@
+@use "sass:color";
+@use "../variables.scss" as *;
+
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid $darker;
+  flex-shrink: 0;
+}
+
+.btn-primary {
+  background-color: $active;
+
+  &:hover {
+    background-color: color.adjust($active, $lightness: 10%);
+  }
+}
+
+.btn-secondary {
+  background-color: $darker;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-arrow {
+  margin-left: 0.3rem;
+  font-size: 0.65rem;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+  background-color: $darker;
+  border-radius: 4px;
+  z-index: 100;
+  min-width: 150px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0;
+  background: none;
+  color: $font;
+
+  &:hover {
+    background-color: $active;
+    color: white;
+  }
+}
+
+.yaml-editor {
+  flex: 1;
+  overflow: hidden;
+
+  .cm-editor {
+    height: 100%;
+  }
+}
+
+.error-panel {
+  flex-shrink: 0;
+  max-height: 120px;
+  overflow-y: auto;
+  border-top: 1px solid $error;
+  background-color: rgba($error, 0.1);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+
+  &.success {
+    border-top-color: $changed;
+    background-color: rgba($changed, 0.1);
+  }
+}
+
+.success-message {
+  color: $changed;
+  font-weight: bold;
+}
+
+.error-item {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+  color: $font;
+  align-items: baseline;
+}
+
+.error-runtime {
+  color: $error;
+  font-weight: bold;
+}
+
+.error-line {
+  color: $warning;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.error-message {
+  color: $font;
+}
+
+.error-path {
+  color: $highlight;
+  font-size: 0.7rem;
+  opacity: 0.7;
+}

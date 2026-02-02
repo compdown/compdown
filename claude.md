@@ -51,9 +51,11 @@ When creating AE objects from YAML: **folders -> files -> compositions -> layers
 
 Four top-level keys: `folders`, `files`, `comps` (with nested `layers`). Schemas defined in `src/js/main/schema/types.ts` using Zod. Key types:
 
-- **Layer types**: `solid`, `null`, `adjustment`, `text`, plus file-based (via `file` key referencing a file `id`)
-- **Layer properties**: name, type, file, inPoint, outPoint, startTime, enabled, shy, locked, threeDLayer, parent, blendingMode, transform
-- **Transform**: anchorPoint, position, scale, rotation, opacity
+- **Layer types**: `solid`, `null`, `adjustment`, `text`, plus file-based (via `file` key referencing a file `id`), plus comp-in-comp (via `comp` key referencing another comp's `name`)
+- **Layer source keys**: exactly one of `type`, `file`, or `comp` must be set per layer
+- **Layer properties**: name, type, file, comp, inPoint, outPoint, startTime, enabled, shy, locked, threeDLayer, parent, blendingMode, transform
+- **Transform**: anchorPoint, position, scale, rotation, opacity — each property accepts either a static value or an array of keyframes (`[{time, value}, ...]`, minimum 2 keyframes)
+- **Keyframe types**: `TupleKeyframeSchema` (for anchorPoint/position/scale with `[n,n]` values), `ScalarKeyframeSchema` (for rotation), `OpacityKeyframeSchema` (for opacity, value clamped 0–100)
 - **Comp defaults**: 1920x1080, 30fps, 10s duration
 
 ## ExtendScript Constraints
@@ -83,8 +85,8 @@ npm run test:watch   # Watch mode (vitest)
 ```
 
 Tests live next to the source in `__tests__/` directories. Currently covering:
-- `src/js/main/schema/__tests__/types.test.ts` — Zod schema validation (Transform, Layer, Comp, File, Folder, Document)
-- `src/js/main/schema/__tests__/validation.test.ts` — YAML parsing, error mapping, line-number resolution
+- `src/js/main/schema/__tests__/types.test.ts` — Zod schema validation (Transform, Transform keyframes, Layer, comp-in-comp, Comp, File, Folder, Document)
+- `src/js/main/schema/__tests__/validation.test.ts` — YAML parsing, error mapping, line-number resolution, comp-in-comp YAML, keyframed transforms YAML
 
 Convention: always write tests for new panel-side logic. ExtendScript code can't be unit-tested outside AE.
 

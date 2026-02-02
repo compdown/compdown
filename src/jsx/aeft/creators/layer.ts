@@ -32,18 +32,24 @@ var blendingModes: { [key: string]: BlendingMode } = {
   luminosity: BlendingMode.LUMINOSITY,
 };
 
+interface KeyframeDef {
+  time: number;
+  value: number | [number, number];
+}
+
 interface TransformDef {
-  anchorPoint?: [number, number];
-  position?: [number, number];
-  scale?: [number, number];
-  rotation?: number;
-  opacity?: number;
+  anchorPoint?: [number, number] | KeyframeDef[];
+  position?: [number, number] | KeyframeDef[];
+  scale?: [number, number] | KeyframeDef[];
+  rotation?: number | KeyframeDef[];
+  opacity?: number | KeyframeDef[];
 }
 
 interface LayerDef {
   name: string;
   type?: string;
   file?: string | number;
+  comp?: string;
   inPoint?: number;
   outPoint?: number;
   startTime?: number;
@@ -63,38 +69,73 @@ interface LayerDef {
 }
 
 /**
+ * Check if a value is an array of keyframe objects (has `time` property)
+ * rather than a numeric tuple like [100, 200].
+ */
+function isKeyframeArray(val: any): val is KeyframeDef[] {
+  if (!(val instanceof Array) || val.length === 0) return false;
+  return typeof val[0] === "object" && val[0] !== null && "time" in val[0];
+}
+
+/**
+ * Apply keyframes to a property.
+ */
+function applyKeyframes(prop: Property, keyframes: KeyframeDef[]): void {
+  for (var k = 0; k < keyframes.length; k++) {
+    prop.setValueAtTime(keyframes[k].time, keyframes[k].value);
+  }
+}
+
+/**
  * Apply transform properties to a layer.
  */
 function applyTransform(layer: Layer, transform: TransformDef): void {
+  var group = layer.property("ADBE Transform Group");
+
   if (transform.anchorPoint) {
-    layer.property("ADBE Transform Group")
-      .property("ADBE Anchor Point")
+    var ap = group.property("ADBE Anchor Point") as Property;
+    if (isKeyframeArray(transform.anchorPoint)) {
+      applyKeyframes(ap, transform.anchorPoint);
+    } else {
       //@ts-ignore
-      .setValue(transform.anchorPoint);
+      ap.setValue(transform.anchorPoint);
+    }
   }
   if (transform.position) {
-    layer.property("ADBE Transform Group")
-      .property("ADBE Position")
+    var pos = group.property("ADBE Position") as Property;
+    if (isKeyframeArray(transform.position)) {
+      applyKeyframes(pos, transform.position);
+    } else {
       //@ts-ignore
-      .setValue(transform.position);
+      pos.setValue(transform.position);
+    }
   }
   if (transform.scale) {
-    layer.property("ADBE Transform Group")
-      .property("ADBE Scale")
+    var sc = group.property("ADBE Scale") as Property;
+    if (isKeyframeArray(transform.scale)) {
+      applyKeyframes(sc, transform.scale);
+    } else {
       //@ts-ignore
-      .setValue(transform.scale);
+      sc.setValue(transform.scale);
+    }
   }
   if (transform.rotation !== undefined) {
-    layer.property("ADBE Transform Group")
-      .property("ADBE Rotate Z")
+    var rot = group.property("ADBE Rotate Z") as Property;
+    if (isKeyframeArray(transform.rotation)) {
+      applyKeyframes(rot, transform.rotation);
+    } else {
       //@ts-ignore
-      .setValue(transform.rotation);
+      rot.setValue(transform.rotation);
+    }
   }
   if (transform.opacity !== undefined) {
-    layer.property("ADBE Transform Group")
-      .property("ADBE Opacity")
+    var op = group.property("ADBE Opacity") as Property;
+    if (isKeyframeArray(transform.opacity)) {
+      applyKeyframes(op, transform.opacity);
+    } else {
       //@ts-ignore
-      .setValue(transform.opacity);
+      op.setValue(transform.opacity);
+    }
   }
 }
 
@@ -114,7 +155,14 @@ export const createLayers = (
     var layerDef = layers[i];
     var newLayer: Layer;
 
-    if (layerDef.file !== undefined) {
+    if (layerDef.comp !== undefined) {
+      // Comp-in-comp layer
+      var refComp = compMap[layerDef.comp];
+      if (!refComp) {
+        throw new Error("Comp with name '" + layerDef.comp + "' not found");
+      }
+      newLayer = comp.layers.add(refComp);
+    } else if (layerDef.file !== undefined) {
       // File-based layer
       var fileId = String(layerDef.file);
       var footage = fileMap[fileId];

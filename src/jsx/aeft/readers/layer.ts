@@ -37,6 +37,23 @@ function toHex(n: number): string {
   return hex.length === 1 ? "0" + hex : hex;
 }
 
+/**
+ * Read keyframes from a property, returning an array of {time, value} objects.
+ */
+function readKeyframes(prop: Property): object[] {
+  var keyframes: object[] = [];
+  for (var i = 1; i <= prop.numKeys; i++) {
+    var val = prop.keyValue(i);
+    var time = Math.round(prop.keyTime(i) * 1000) / 1000;
+    if (val instanceof Array) {
+      keyframes.push({ time: time, value: [Math.round(val[0]), Math.round(val[1])] });
+    } else {
+      keyframes.push({ time: time, value: Math.round(val as number) });
+    }
+  }
+  return keyframes;
+}
+
 function readTransform(layer: Layer): object | null {
   var transform: { [key: string]: any } = {};
   var hasValues = false;
@@ -45,31 +62,51 @@ function readTransform(layer: Layer): object | null {
 
   var pos = group.property("ADBE Position") as Property;
   if (pos) {
-    var posVal = pos.value as number[];
-    transform.position = [Math.round(posVal[0]), Math.round(posVal[1])];
-    hasValues = true;
-  }
-
-  var scale = group.property("ADBE Scale") as Property;
-  if (scale) {
-    var scaleVal = scale.value as number[];
-    // Only include if not default [100, 100]
-    if (scaleVal[0] !== 100 || scaleVal[1] !== 100) {
-      transform.scale = [Math.round(scaleVal[0]), Math.round(scaleVal[1])];
+    if (pos.numKeys > 0) {
+      transform.position = readKeyframes(pos);
+      hasValues = true;
+    } else {
+      var posVal = pos.value as number[];
+      transform.position = [Math.round(posVal[0]), Math.round(posVal[1])];
       hasValues = true;
     }
   }
 
+  var scale = group.property("ADBE Scale") as Property;
+  if (scale) {
+    if (scale.numKeys > 0) {
+      transform.scale = readKeyframes(scale);
+      hasValues = true;
+    } else {
+      var scaleVal = scale.value as number[];
+      // Only include if not default [100, 100]
+      if (scaleVal[0] !== 100 || scaleVal[1] !== 100) {
+        transform.scale = [Math.round(scaleVal[0]), Math.round(scaleVal[1])];
+        hasValues = true;
+      }
+    }
+  }
+
   var rotation = group.property("ADBE Rotate Z") as Property;
-  if (rotation && rotation.value !== 0) {
-    transform.rotation = rotation.value;
-    hasValues = true;
+  if (rotation) {
+    if (rotation.numKeys > 0) {
+      transform.rotation = readKeyframes(rotation);
+      hasValues = true;
+    } else if (rotation.value !== 0) {
+      transform.rotation = rotation.value;
+      hasValues = true;
+    }
   }
 
   var opacity = group.property("ADBE Opacity") as Property;
-  if (opacity && opacity.value !== 100) {
-    transform.opacity = opacity.value;
-    hasValues = true;
+  if (opacity) {
+    if (opacity.numKeys > 0) {
+      transform.opacity = readKeyframes(opacity);
+      hasValues = true;
+    } else if (opacity.value !== 100) {
+      transform.opacity = opacity.value;
+      hasValues = true;
+    }
   }
 
   return hasValues ? transform : null;
@@ -96,7 +133,7 @@ export function readLayer(layer: Layer): object {
     }
   } else if (layer.source && layer.source instanceof CompItem) {
     // Layer referencing a comp
-    result.file = layer.source.name;
+    result.comp = layer.source.name;
   } else if (layer.source && layer.source instanceof FootageItem) {
     var source = layer.source as FootageItem;
     if (source.file) {

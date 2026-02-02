@@ -245,4 +245,122 @@ comps:
     expect(result.data!.comps![0].layers).toHaveLength(5);
     expect(result.data!.comps![0].framerate).toBe(24);
   });
+
+  // ---------------------------------------------------------------------------
+  // Comp-in-comp
+  // ---------------------------------------------------------------------------
+
+  it("validates a document with comp-in-comp layer", () => {
+    const yaml = `
+comps:
+  - name: Inner Comp
+    layers:
+      - name: BG
+        type: solid
+        color: "000000"
+  - name: Outer Comp
+    layers:
+      - name: Nested
+        comp: Inner Comp
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+    expect(result.data!.comps).toHaveLength(2);
+    const outerLayers = result.data!.comps![1].layers!;
+    expect(outerLayers[0].comp).toBe("Inner Comp");
+    expect(outerLayers[0].file).toBeUndefined();
+    expect(outerLayers[0].type).toBeUndefined();
+  });
+
+  it("rejects a layer with both comp and file in YAML", () => {
+    const yaml = `
+comps:
+  - name: Bad Comp
+    layers:
+      - name: Conflict
+        comp: Other
+        file: clip1
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(false);
+    expect(
+      result.errors.some((e) => e.message.includes("exactly one"))
+    ).toBe(true);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Keyframe animation
+  // ---------------------------------------------------------------------------
+
+  it("validates a document with keyframed transforms", () => {
+    const yaml = `
+comps:
+  - name: Animated
+    layers:
+      - name: Mover
+        type: "null"
+        transform:
+          position:
+            - time: 0
+              value: [0, 0]
+            - time: 5
+              value: [1920, 1080]
+          opacity:
+            - time: 0
+              value: 0
+            - time: 2
+              value: 100
+          rotation:
+            - time: 0
+              value: 0
+            - time: 3
+              value: 360
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+    const transform = result.data!.comps![0].layers![0].transform!;
+    expect(Array.isArray(transform.position)).toBe(true);
+    expect(Array.isArray(transform.opacity)).toBe(true);
+    expect(Array.isArray(transform.rotation)).toBe(true);
+  });
+
+  it("validates mixed static + keyframed transforms in YAML", () => {
+    const yaml = `
+comps:
+  - name: Mixed
+    layers:
+      - name: Layer
+        type: "null"
+        transform:
+          rotation: 45
+          position:
+            - time: 0
+              value: [0, 0]
+            - time: 5
+              value: [1920, 1080]
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+    const transform = result.data!.comps![0].layers![0].transform!;
+    expect(transform.rotation).toBe(45);
+    expect(Array.isArray(transform.position)).toBe(true);
+  });
+
+  it("rejects keyframed opacity out of range in YAML", () => {
+    const yaml = `
+comps:
+  - name: Bad Opacity
+    layers:
+      - name: Layer
+        type: "null"
+        transform:
+          opacity:
+            - time: 0
+              value: 0
+            - time: 2
+              value: 150
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(false);
+  });
 });

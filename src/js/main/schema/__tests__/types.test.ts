@@ -7,6 +7,9 @@ import {
   FolderSchema,
   CompdownDocumentSchema,
   BlendingModeSchema,
+  TupleKeyframeSchema,
+  ScalarKeyframeSchema,
+  OpacityKeyframeSchema,
 } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -50,6 +53,140 @@ describe("TransformSchema", () => {
 
   it("rejects non-tuple position", () => {
     const result = Schema.safeParse({ position: [1, 2, 3] });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TransformSchema (keyframes)
+// ---------------------------------------------------------------------------
+
+describe("TransformSchema (keyframes)", () => {
+  const Schema = TransformSchema.unwrap();
+
+  it("accepts static values (backward compat)", () => {
+    const result = Schema.safeParse({
+      position: [100, 200],
+      rotation: 45,
+      opacity: 50,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts keyframed position", () => {
+    const result = Schema.safeParse({
+      position: [
+        { time: 0, value: [0, 0] },
+        { time: 5, value: [1920, 1080] },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts keyframed rotation", () => {
+    const result = Schema.safeParse({
+      rotation: [
+        { time: 0, value: 0 },
+        { time: 3, value: 360 },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts keyframed scale", () => {
+    const result = Schema.safeParse({
+      scale: [
+        { time: 0, value: [0, 0] },
+        { time: 1, value: [100, 100] },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts keyframed anchorPoint", () => {
+    const result = Schema.safeParse({
+      anchorPoint: [
+        { time: 0, value: [0, 0] },
+        { time: 2, value: [960, 540] },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts keyframed opacity", () => {
+    const result = Schema.safeParse({
+      opacity: [
+        { time: 0, value: 0 },
+        { time: 2, value: 100 },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects keyframed opacity out of range (value: 150)", () => {
+    const result = Schema.safeParse({
+      opacity: [
+        { time: 0, value: 0 },
+        { time: 2, value: 150 },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects single keyframe (min 2)", () => {
+    const result = Schema.safeParse({
+      position: [{ time: 0, value: [0, 0] }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects negative time", () => {
+    const result = Schema.safeParse({
+      rotation: [
+        { time: -1, value: 0 },
+        { time: 2, value: 90 },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing time field", () => {
+    const result = Schema.safeParse({
+      rotation: [{ value: 0 }, { time: 2, value: 90 }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing value field", () => {
+    const result = Schema.safeParse({
+      rotation: [
+        { time: 0 },
+        { time: 2, value: 90 },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts mixed static + keyframed properties", () => {
+    const result = Schema.safeParse({
+      rotation: 45,
+      position: [
+        { time: 0, value: [0, 0] },
+        { time: 5, value: [1920, 1080] },
+      ],
+      opacity: [
+        { time: 0, value: 0 },
+        { time: 2, value: 100 },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects extra keys on transform (strict)", () => {
+    const result = Schema.safeParse({
+      rotation: 45,
+      foo: "bar",
+    });
     expect(result.success).toBe(false);
   });
 });
@@ -127,10 +264,44 @@ describe("LayerSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects a layer with neither type nor file", () => {
+  it("rejects a layer with neither type, file, nor comp", () => {
     const result = LayerSchema.safeParse({ name: "Orphan" });
     expect(result.success).toBe(false);
-    expect(result.error!.issues.some((i) => i.message.includes("type"))).toBe(true);
+    expect(
+      result.error!.issues.some((i) => i.message.includes("exactly one"))
+    ).toBe(true);
+  });
+
+  it("accepts a comp-in-comp layer", () => {
+    const result = LayerSchema.safeParse({
+      name: "Nested",
+      comp: "Other Comp",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a layer with both comp and file", () => {
+    const result = LayerSchema.safeParse({
+      name: "Bad",
+      comp: "Other",
+      file: "clip1",
+    });
+    expect(result.success).toBe(false);
+    expect(
+      result.error!.issues.some((i) => i.message.includes("exactly one"))
+    ).toBe(true);
+  });
+
+  it("rejects a layer with both comp and type", () => {
+    const result = LayerSchema.safeParse({
+      name: "Bad",
+      comp: "Other",
+      type: "null",
+    });
+    expect(result.success).toBe(false);
+    expect(
+      result.error!.issues.some((i) => i.message.includes("exactly one"))
+    ).toBe(true);
   });
 
   it("rejects a solid layer without color", () => {

@@ -1,14 +1,41 @@
 import { z } from "zod";
 
+// --- Keyframes ---
+
+export const TupleKeyframeSchema = z.object({
+  time: z.number().min(0),
+  value: z.tuple([z.number(), z.number()]),
+});
+
+export const ScalarKeyframeSchema = z.object({
+  time: z.number().min(0),
+  value: z.number(),
+});
+
+export const OpacityKeyframeSchema = z.object({
+  time: z.number().min(0),
+  value: z.number().min(0).max(100),
+});
+
 // --- Transform ---
 
 export const TransformSchema = z
   .object({
-    anchorPoint: z.tuple([z.number(), z.number()]).optional(),
-    position: z.tuple([z.number(), z.number()]).optional(),
-    scale: z.tuple([z.number(), z.number()]).optional(),
-    rotation: z.number().optional(),
-    opacity: z.number().min(0).max(100).optional(),
+    anchorPoint: z
+      .union([z.tuple([z.number(), z.number()]), z.array(TupleKeyframeSchema).min(2)])
+      .optional(),
+    position: z
+      .union([z.tuple([z.number(), z.number()]), z.array(TupleKeyframeSchema).min(2)])
+      .optional(),
+    scale: z
+      .union([z.tuple([z.number(), z.number()]), z.array(TupleKeyframeSchema).min(2)])
+      .optional(),
+    rotation: z
+      .union([z.number(), z.array(ScalarKeyframeSchema).min(2)])
+      .optional(),
+    opacity: z
+      .union([z.number().min(0).max(100), z.array(OpacityKeyframeSchema).min(2)])
+      .optional(),
   })
   .strict()
   .optional();
@@ -56,6 +83,7 @@ export const LayerSchema = z
     name: z.string().min(1),
     type: z.enum(["solid", "null", "adjustment", "text"]).optional(),
     file: z.union([z.string(), z.number()]).optional(),
+    comp: z.string().optional(),
 
     // Timing
     inPoint: z.number().min(0).optional(),
@@ -88,10 +116,16 @@ export const LayerSchema = z
   })
   .refine(
     (layer) => {
-      // A layer must have either a type or a file reference
-      return layer.type !== undefined || layer.file !== undefined;
+      // A layer must have exactly one of type, file, or comp
+      const has = [layer.type, layer.file, layer.comp].filter(
+        (v) => v !== undefined
+      ).length;
+      return has === 1;
     },
-    { message: "Layer must have either 'type' or 'file' specified" }
+    {
+      message:
+        "Layer must have exactly one of 'type', 'file', or 'comp' specified",
+    }
   )
   .refine(
     (layer) => {

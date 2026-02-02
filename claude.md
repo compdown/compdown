@@ -73,7 +73,22 @@ Code in `src/jsx/` compiles to ES3. Restrictions:
 - `src/shared/shared.ts` — Namespace derived from `cep.config.ts` id
 - `src/shared/universals.d.ts` — Event types for ExtendScript <-> panel events
 
-## Testing in AE
+## Testing
+
+### Unit Tests
+
+```bash
+npm test             # Run all tests once (vitest run)
+npm run test:watch   # Watch mode (vitest)
+```
+
+Tests live next to the source in `__tests__/` directories. Currently covering:
+- `src/js/main/schema/__tests__/types.test.ts` — Zod schema validation (Transform, Layer, Comp, File, Folder, Document)
+- `src/js/main/schema/__tests__/validation.test.ts` — YAML parsing, error mapping, line-number resolution
+
+Convention: always write tests for new panel-side logic. ExtendScript code can't be unit-tested outside AE.
+
+### Testing in AE
 
 1. Enable PlayerDebugMode (aescripts ZXP Installer > Settings > Debug > Enable Debugging)
 2. `npm run build` then restart AE, or `npm run dev` for HMR

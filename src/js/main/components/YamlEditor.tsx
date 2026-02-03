@@ -1,17 +1,17 @@
-import { useEffect, useRef } from "react";
-import { EditorView, keymap, lineNumbers } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
-import { yaml } from "@codemirror/lang-yaml";
-import { oneDark } from "@codemirror/theme-one-dark";
-import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { yaml } from "@codemirror/lang-yaml";
 import {
   bracketMatching,
-  indentOnInput,
   foldGutter,
   foldKeymap,
+  indentOnInput,
 } from "@codemirror/language";
-import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
+import { EditorState } from "@codemirror/state";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView, keymap, lineNumbers } from "@codemirror/view";
+import { useEffect, useRef } from "react";
 import type { ValidationError } from "../schema/validation";
 
 const SAMPLE_YAML = `compositions:
@@ -23,7 +23,7 @@ const SAMPLE_YAML = `compositions:
     layers:
       - name: background
         type: solid
-        color: "1a1a2e"
+        color: 1a1a2e
       - name: title
         type: text
         text: Hello World

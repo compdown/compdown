@@ -96,3 +96,17 @@ Convention: always write tests for new panel-side logic. ExtendScript code can't
 1. Enable PlayerDebugMode (aescripts ZXP Installer > Settings > Debug > Enable Debugging)
 2. `npm run build` then restart AE, or `npm run dev` for HMR
 3. Panel appears under Window > Extensions > Compdown
+
+## Releases
+
+When creating a new release:
+
+1. Create an annotated tag: `git tag -a vX.Y.Z -m "Brief description"`
+2. Push the tag: `git push origin vX.Y.Z`
+3. A GitHub Actions workflow automatically creates a release with the ZXP artifact
+4. **Always edit the release** to add detailed changelog notes using `gh release edit vX.Y.Z --notes "..."`
+
+Release notes should include:
+- **New Features**: What was added
+- **Example**: YAML snippet showing the feature
+- **Notes**: Version requirements, limitations, breaking changes

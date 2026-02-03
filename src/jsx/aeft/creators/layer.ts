@@ -108,14 +108,24 @@ function isEffectKeyframeArray(val: any): val is EffectKeyframeDef[] {
 }
 
 /**
- * Convert a boolean to 1/0 for AE effect properties.
+ * Convert a single boolean to 1/0 for AE effect properties.
+ */
+function boolToInt(v: any): any {
+  if (v === true) return 1;
+  if (v === false) return 0;
+  return v;
+}
+
+/**
+ * Convert booleans to 1/0 for AE effect properties (scalar or array).
  */
 function boolToNum(val: any): any {
-  if (typeof val === "boolean") return val ? 1 : 0;
+  if (val === true) return 1;
+  if (val === false) return 0;
   if (val instanceof Array) {
     var result: any[] = [];
     for (var i = 0; i < val.length; i++) {
-      result.push(typeof val[i] === "boolean" ? (val[i] ? 1 : 0) : val[i]);
+      result.push(boolToInt(val[i]));
     }
     return result;
   }

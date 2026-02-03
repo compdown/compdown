@@ -247,6 +247,39 @@ compositions:
   });
 
   // ---------------------------------------------------------------------------
+  // YAML null literal handling
+  // ---------------------------------------------------------------------------
+
+  it("handles unquoted null as layer type", () => {
+    // In YAML, `type: null` (unquoted) parses as JavaScript null
+    // Our preprocessor should convert it to the string "null"
+    const yaml = `
+compositions:
+  - name: Test
+    layers:
+      - name: Controller
+        type: null
+        threeDLayer: true
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+    expect(result.data!.compositions![0].layers![0].type).toBe("null");
+  });
+
+  it("handles quoted null as layer type", () => {
+    const yaml = `
+compositions:
+  - name: Test
+    layers:
+      - name: Controller
+        type: "null"
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+    expect(result.data!.compositions![0].layers![0].type).toBe("null");
+  });
+
+  // ---------------------------------------------------------------------------
   // Comp-in-comp
   // ---------------------------------------------------------------------------
 

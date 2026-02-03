@@ -60,6 +60,36 @@ function findLineForPath(yamlText: string, path: (string | number)[]): number | 
 }
 
 /**
+ * Post-process parsed YAML to handle YAML's null literal in layer type fields.
+ * In YAML, `type: null` parses as JavaScript null, but we want it as the string "null".
+ */
+function preprocessParsedYaml(data: unknown): unknown {
+  if (data === null || data === undefined || typeof data !== "object") {
+    return data;
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  // If this looks like a layer object with type: null, convert to "null"
+  if ("name" in obj && obj.type === null) {
+    obj.type = "null";
+  }
+
+  // Recurse into compositions and layers
+  if (Array.isArray(obj.compositions)) {
+    for (const comp of obj.compositions) {
+      if (comp && typeof comp === "object" && Array.isArray((comp as Record<string, unknown>).layers)) {
+        for (const layer of (comp as Record<string, unknown>).layers as unknown[]) {
+          preprocessParsedYaml(layer);
+        }
+      }
+    }
+  }
+
+  return data;
+}
+
+/**
  * Parse and validate a YAML string against the Compdown schema.
  */
 export function validateYaml(yamlText: string): ValidationResult {
@@ -87,6 +117,9 @@ export function validateYaml(yamlText: string): ValidationResult {
       errors: [{ line: 1, message: "Document is empty", path: [] }],
     };
   }
+
+  // Step 1.5: Handle YAML null literal in layer type fields
+  preprocessParsedYaml(parsed);
 
   // Step 2: Validate with Zod
   const result = CompdownDocumentSchema.safeParse(parsed);

@@ -16,6 +16,7 @@ import {
   AutoOrientSchema,
   FrameBlendingTypeSchema,
   TrackMatteTypeSchema,
+  EssentialGraphicsItemSchema,
 } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -769,6 +770,60 @@ describe("CompSchema", () => {
     expect(result.success).toBe(true);
     expect(result.data!.folder).toBe("My Folder");
   });
+
+  it("accepts essentialGraphics with simple string paths", () => {
+    const result = CompSchema.safeParse({
+      name: "Comp",
+      essentialGraphics: [
+        "title.transform.position",
+        "title.text",
+      ],
+    });
+    expect(result.success).toBe(true);
+    expect(result.data!.essentialGraphics).toHaveLength(2);
+  });
+
+  it("accepts essentialGraphics with expanded form", () => {
+    const result = CompSchema.safeParse({
+      name: "Comp",
+      essentialGraphics: [
+        { property: "title.transform.position", name: "Logo Position" },
+        { property: "title.text", name: "Headline" },
+      ],
+    });
+    expect(result.success).toBe(true);
+    expect(result.data!.essentialGraphics).toHaveLength(2);
+  });
+
+  it("accepts essentialGraphics with mixed forms", () => {
+    const result = CompSchema.safeParse({
+      name: "Comp",
+      essentialGraphics: [
+        "title.transform.position",
+        { property: "title.text", name: "Headline" },
+      ],
+    });
+    expect(result.success).toBe(true);
+    expect(result.data!.essentialGraphics).toHaveLength(2);
+  });
+
+  it("accepts essentialGraphics with effect properties", () => {
+    const result = CompSchema.safeParse({
+      name: "Comp",
+      essentialGraphics: [
+        { property: "bar.effects.Gaussian Blur.Blurriness", name: "Bar Blur" },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects essentialGraphics with invalid items", () => {
+    const result = CompSchema.safeParse({
+      name: "Comp",
+      essentialGraphics: [123],
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -844,6 +899,66 @@ describe("FolderSchema", () => {
 
   it("rejects a folder with empty name", () => {
     const result = FolderSchema.safeParse({ name: "" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// EssentialGraphicsItemSchema
+// ---------------------------------------------------------------------------
+
+describe("EssentialGraphicsItemSchema", () => {
+  it("accepts a simple string path", () => {
+    const result = EssentialGraphicsItemSchema.safeParse("title.transform.position");
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an object with property and name", () => {
+    const result = EssentialGraphicsItemSchema.safeParse({
+      property: "title.transform.position",
+      name: "Logo Position",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({
+        property: "title.transform.position",
+        name: "Logo Position",
+      });
+    }
+  });
+
+  it("rejects empty string", () => {
+    const result = EssentialGraphicsItemSchema.safeParse("");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects object with empty property", () => {
+    const result = EssentialGraphicsItemSchema.safeParse({
+      property: "",
+      name: "Logo Position",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects object with empty name", () => {
+    const result = EssentialGraphicsItemSchema.safeParse({
+      property: "title.transform.position",
+      name: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects object with missing property", () => {
+    const result = EssentialGraphicsItemSchema.safeParse({
+      name: "Logo Position",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects object with missing name", () => {
+    const result = EssentialGraphicsItemSchema.safeParse({
+      property: "title.transform.position",
+    });
     expect(result.success).toBe(false);
   });
 });

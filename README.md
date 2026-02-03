@@ -307,6 +307,70 @@ transform:
 
 `normal`, `dissolve`, `darken`, `multiply`, `colorBurn`, `linearBurn`, `darkerColor`, `lighten`, `screen`, `colorDodge`, `linearDodge`, `lighterColor`, `overlay`, `softLight`, `hardLight`, `vividLight`, `linearLight`, `pinLight`, `hardMix`, `difference`, `exclusion`, `subtract`, `divide`, `hue`, `saturation`, `color`, `luminosity`
 
+#### `essentialGraphics`
+
+Expose layer properties to the Essential Graphics Panel for creating Motion Graphics Templates (.mogrt). Each composition can have an optional `essentialGraphics` array.
+
+**Two forms are supported:**
+
+Simple form (string path, uses AE's default property name):
+```yaml
+essentialGraphics:
+  - title.transform.position
+  - title.text
+```
+
+Expanded form (custom display name):
+```yaml
+essentialGraphics:
+  - property: title.transform.position
+    name: "Logo Position"
+  - property: title.text
+    name: "Headline"
+```
+
+**Property path format:** `layerName.propertyPath`
+
+| Path Pattern | Description |
+|--------------|-------------|
+| `layer.transform.position` | Position property |
+| `layer.transform.scale` | Scale property |
+| `layer.transform.rotation` | Rotation property |
+| `layer.transform.opacity` | Opacity property |
+| `layer.transform.anchorPoint` | Anchor point property |
+| `layer.text` | Text source property |
+| `layer.effects.EffectName.PropName` | Effect property |
+
+**Full example:**
+```yaml
+compositions:
+  - name: Lower Third
+    layers:
+      - name: title
+        type: text
+        text: "Breaking News"
+      - name: bar
+        type: solid
+        color: FF0000
+        effects:
+          - name: Gaussian Blur
+            properties:
+              Blurriness: 10
+
+    essentialGraphics:
+      - property: title.text
+        name: "Headline"
+      - property: title.transform.position
+        name: "Title Position"
+      - property: bar.effects.Gaussian Blur.Blurriness
+        name: "Bar Blur"
+```
+
+> [!NOTE]
+> - Not all properties can be added to the Essential Graphics Panel. Compdown checks `canAddToMotionGraphicsTemplate()` and skips unsupported properties silently.
+> - `addToMotionGraphicsTemplateAs()` (custom names) requires After Effects CC 2019 (16.1) or later.
+> - When exporting a comp back to YAML, only the controller names are exported (the AE API doesn't expose the original property paths).
+
 ## Architecture
 
 The extension runs two separate runtimes connected by [Bolt CEP](https://github.com/nicholaseager/bolt-cep):

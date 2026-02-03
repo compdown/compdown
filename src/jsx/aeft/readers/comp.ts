@@ -1,4 +1,5 @@
 import { readAllLayers, readSelectedLayers } from "./layer";
+import { readEssentialGraphics } from "./essentialGraphics";
 
 function toHex(n: number): string {
   var hex = Math.round(n * 255).toString(16);
@@ -31,6 +32,12 @@ export function readComp(comp: CompItem, selectionOnly: boolean): object {
   compData.layers = selectionOnly
     ? readSelectedLayers(comp)
     : readAllLayers(comp);
+
+  // Read Essential Graphics (if any)
+  var egItems = readEssentialGraphics(comp);
+  if (egItems && egItems.length > 0) {
+    compData.essentialGraphics = egItems;
+  }
 
   return compData;
 }

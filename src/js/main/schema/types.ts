@@ -215,6 +215,18 @@ export const LayerSchema = z
 
 export type Layer = z.infer<typeof LayerSchema>;
 
+// --- Essential Graphics ---
+
+export const EssentialGraphicsItemSchema = z.union([
+  z.string().min(1), // Simple form: "layer.transform.position"
+  z.object({
+    property: z.string().min(1),
+    name: z.string().min(1),
+  }),
+]);
+
+export type EssentialGraphicsItem = z.infer<typeof EssentialGraphicsItemSchema>;
+
 // --- Composition ---
 
 export const CompSchema = z.object({
@@ -230,6 +242,7 @@ export const CompSchema = z.object({
     .default("000000"),
   folder: z.string().optional(),
   layers: z.array(LayerSchema).optional(),
+  essentialGraphics: z.array(EssentialGraphicsItemSchema).optional(),
 });
 
 export type Comp = z.infer<typeof CompSchema>;

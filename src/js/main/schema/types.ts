@@ -28,6 +28,16 @@ export const OpacityKeyframeSchema = z.object({
 
 // --- Transform ---
 
+export const TransformExpressionsSchema = z.object({
+  anchorPoint: z.string().optional(),
+  position: z.string().optional(),
+  positionX: z.string().optional(),
+  positionY: z.string().optional(),
+  scale: z.string().optional(),
+  rotation: z.string().optional(),
+  opacity: z.string().optional(),
+}).strict().optional();
+
 export const TransformSchema = z
   .object({
     anchorPoint: z
@@ -51,6 +61,7 @@ export const TransformSchema = z
     opacity: z
       .union([z.number().min(0).max(100), z.array(OpacityKeyframeSchema).min(2)])
       .optional(),
+    expressions: TransformExpressionsSchema,
   })
   .strict()
   .refine(
@@ -89,6 +100,7 @@ export const EffectSchema = z.object({
   matchName: z.string().optional(),
   enabled: z.boolean().optional(),
   properties: z.record(z.string(), EffectPropertyValueSchema).optional(),
+  expressions: z.record(z.string(), z.string()).optional(),
 });
 
 export type Effect = z.infer<typeof EffectSchema>;

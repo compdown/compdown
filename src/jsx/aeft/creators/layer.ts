@@ -84,6 +84,16 @@ interface KeyframeDef {
   easing?: string;
 }
 
+interface TransformExpressionsDef {
+  anchorPoint?: string;
+  position?: string;
+  positionX?: string;
+  positionY?: string;
+  scale?: string;
+  rotation?: string;
+  opacity?: string;
+}
+
 interface TransformDef {
   anchorPoint?: [number, number] | KeyframeDef[];
   position?: [number, number] | KeyframeDef[];
@@ -92,6 +102,7 @@ interface TransformDef {
   scale?: [number, number] | KeyframeDef[];
   rotation?: number | KeyframeDef[];
   opacity?: number | KeyframeDef[];
+  expressions?: TransformExpressionsDef;
 }
 
 interface EffectKeyframeDef {
@@ -105,6 +116,7 @@ interface EffectDef {
   matchName?: string;
   enabled?: boolean;
   properties?: { [key: string]: number | boolean | number[] | EffectKeyframeDef[] };
+  expressions?: { [key: string]: string };
 }
 
 interface LayerDef {
@@ -326,6 +338,21 @@ function applyEffects(layer: Layer, effects: EffectDef[]): void {
         }
       }
     }
+
+    // Apply expressions to effect properties
+    if (eDef.expressions) {
+      for (var exprPropName in eDef.expressions) {
+        if (!eDef.expressions.hasOwnProperty(exprPropName)) continue;
+        try {
+          var exprProp = effect.property(exprPropName) as Property;
+          if (exprProp && exprProp.canSetExpression) {
+            exprProp.expression = eDef.expressions[exprPropName];
+          }
+        } catch (e) {
+          // Some properties may not support expressions; skip silently
+        }
+      }
+    }
   }
 }
 
@@ -402,6 +429,30 @@ function applyTransform(layer: Layer, transform: TransformDef): void {
     } else {
       //@ts-ignore
       op.setValue(transform.opacity);
+    }
+  }
+
+  // Apply expressions
+  if (transform.expressions) {
+    var exprMap: { [key: string]: string } = {
+      anchorPoint: "ADBE Anchor Point",
+      position: "ADBE Position",
+      positionX: "ADBE Position_0",
+      positionY: "ADBE Position_1",
+      scale: "ADBE Scale",
+      rotation: "ADBE Rotate Z",
+      opacity: "ADBE Opacity",
+    };
+
+    for (var propName in transform.expressions) {
+      if (!transform.expressions.hasOwnProperty(propName)) continue;
+      var matchName = exprMap[propName];
+      if (matchName) {
+        var prop = group.property(matchName) as Property;
+        if (prop && prop.canSetExpression) {
+          prop.expression = transform.expressions[propName];
+        }
+      }
     }
   }
 }

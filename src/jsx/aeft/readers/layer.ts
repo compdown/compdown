@@ -249,6 +249,25 @@ function readEffects(layer: Layer): object[] | null {
       effectObj.properties = properties;
     }
 
+    // Read expressions from effect properties
+    var exprObj: { [key: string]: string } = {};
+    var hasExpr = false;
+    for (var je = 1; je <= effect.numProperties; je++) {
+      try {
+        var exprProp = effect.property(je) as Property;
+        if (exprProp.propertyType !== PropertyType.PROPERTY) continue;
+        if (exprProp.expression && exprProp.expression.length > 0) {
+          exprObj[exprProp.name] = exprProp.expression;
+          hasExpr = true;
+        }
+      } catch (e) {
+        // Skip unreadable properties
+      }
+    }
+    if (hasExpr) {
+      effectObj.expressions = exprObj;
+    }
+
     effects.push(effectObj);
   }
 
@@ -345,6 +364,38 @@ function readTransform(layer: Layer): object | null {
       transform.opacity = opacity.value;
       hasValues = true;
     }
+  }
+
+  // Read expressions
+  var expressions: { [key: string]: string } = {};
+  var hasExpressions = false;
+
+  var exprProps: { [key: string]: string } = {
+    "ADBE Anchor Point": "anchorPoint",
+    "ADBE Position": "position",
+    "ADBE Position_0": "positionX",
+    "ADBE Position_1": "positionY",
+    "ADBE Scale": "scale",
+    "ADBE Rotate Z": "rotation",
+    "ADBE Opacity": "opacity",
+  };
+
+  for (var matchName in exprProps) {
+    if (!exprProps.hasOwnProperty(matchName)) continue;
+    try {
+      var exprProp = group.property(matchName) as Property;
+      if (exprProp && exprProp.expression && exprProp.expression.length > 0) {
+        expressions[exprProps[matchName]] = exprProp.expression;
+        hasExpressions = true;
+      }
+    } catch (e) {
+      // Property may not exist; skip
+    }
+  }
+
+  if (hasExpressions) {
+    transform.expressions = expressions;
+    hasValues = true;
   }
 
   return hasValues ? transform : null;

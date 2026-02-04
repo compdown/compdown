@@ -233,6 +233,53 @@ describe("TransformSchema (keyframes)", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts expressions on transform properties", () => {
+    const result = Schema.safeParse({
+      position: [960, 540],
+      expressions: {
+        position: "wiggle(5, 50)",
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts expressions with values and keyframes", () => {
+    const result = Schema.safeParse({
+      rotation: [
+        { time: 0, value: 0 },
+        { time: 2, value: 360 },
+      ],
+      opacity: 100,
+      expressions: {
+        rotation: "time * 36",
+        opacity: "Math.sin(time) * 50 + 50",
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts expressions on positionX/positionY", () => {
+    const result = Schema.safeParse({
+      positionX: 960,
+      positionY: 540,
+      expressions: {
+        positionX: "wiggle(2, 100)[0]",
+        positionY: "wiggle(2, 100)[1]",
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects unknown property in expressions", () => {
+    const result = Schema.safeParse({
+      position: [960, 540],
+      expressions: {
+        unknown: "wiggle(5, 50)",
+      },
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -842,6 +889,34 @@ describe("EffectSchema", () => {
       },
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts expressions on effect properties", () => {
+    const result = EffectSchema.safeParse({
+      name: "Gaussian Blur",
+      properties: {
+        Blurriness: 10,
+      },
+      expressions: {
+        Blurriness: "wiggle(1, 5)",
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts multiple expressions", () => {
+    const result = EffectSchema.safeParse({
+      name: "Radial Blur",
+      properties: {
+        Amount: 50,
+        Center: [960, 540],
+      },
+      expressions: {
+        Amount: "time * 10",
+        Center: "thisComp.layer(1).transform.position",
+      },
+    });
+    expect(result.success).toBe(true);
   });
 });
 

@@ -249,10 +249,11 @@ An optional array on each layer. Each effect has:
 
 | Property   | Type    | Required | Description                               |
 | ---------- | ------- | -------- | ----------------------------------------- |
-| name       | string  | yes      | Effect display name                       |
-| matchName  | string  | no       | AE internal match name (for portability)  |
-| enabled    | boolean | no       | Default `true`; set `false` to disable    |
-| properties | object  | no       | Key-value map of property names to values |
+| name        | string  | yes      | Effect display name                       |
+| matchName   | string  | no       | AE internal match name (for portability)  |
+| enabled     | boolean | no       | Default `true`; set `false` to disable    |
+| properties  | object  | no       | Key-value map of property names to values |
+| expressions | object  | no       | Key-value map of property names to expressions |
 
 **Property value types:**
 
@@ -325,6 +326,17 @@ transform:
 | `easeOut` | Slow departure from this keyframe |
 | `easeInOut` | Slow arrival and departure |
 | `hold` | Hold value until next keyframe (no interpolation) |
+
+**Expressions**: Add an `expressions` object to apply AE expressions to transform properties:
+
+```yaml
+transform:
+  position: [960, 540]
+  rotation: 0
+  expressions:
+    position: "wiggle(5, 50)"
+    rotation: "time * 36"
+```
 
 #### `markers`
 

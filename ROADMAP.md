@@ -70,8 +70,9 @@ compositions:
 ### Shape layers
 Create rectangles, ellipses, and custom paths via YAML.
 
-### Expressions
-Link properties with AE expressions.
+### ~~Expressions~~
+**Status:** Done
+Link properties with AE expressions via `expressions` object on transform and effects.
 
 ### 3D camera/lights
 Create camera and light layers.

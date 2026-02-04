@@ -278,13 +278,35 @@ function readTransform(layer: Layer): object | null {
 
   var pos = group.property("ADBE Position") as Property;
   if (pos) {
-    if (pos.numKeys > 0) {
-      transform.position = readKeyframes(pos);
-      hasValues = true;
+    // Check if dimensions are separated
+    if (pos.dimensionsSeparated) {
+      var posX = group.property("ADBE Position_0") as Property;
+      var posY = group.property("ADBE Position_1") as Property;
+
+      if (posX && posX.numKeys > 0) {
+        transform.positionX = readKeyframes(posX);
+        hasValues = true;
+      } else if (posX) {
+        transform.positionX = Math.round(posX.value as number);
+        hasValues = true;
+      }
+
+      if (posY && posY.numKeys > 0) {
+        transform.positionY = readKeyframes(posY);
+        hasValues = true;
+      } else if (posY) {
+        transform.positionY = Math.round(posY.value as number);
+        hasValues = true;
+      }
     } else {
-      var posVal = pos.value as number[];
-      transform.position = [Math.round(posVal[0]), Math.round(posVal[1])];
-      hasValues = true;
+      if (pos.numKeys > 0) {
+        transform.position = readKeyframes(pos);
+        hasValues = true;
+      } else {
+        var posVal = pos.value as number[];
+        transform.position = [Math.round(posVal[0]), Math.round(posVal[1])];
+        hasValues = true;
+      }
     }
   }
 

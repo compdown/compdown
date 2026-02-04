@@ -82,8 +82,9 @@ Add masks to layers with animatable paths.
 ### Audio layers
 Create standalone audio layers (not just imported files).
 
-### Separate position dimensions
-Keyframe X and Y position independently.
+### ~~Separate position dimensions~~
+**Status:** Done
+Keyframe X and Y position independently via `positionX` and `positionY`.
 
 ### Text animators
 Per-character animation via text animators.

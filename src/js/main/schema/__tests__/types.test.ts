@@ -198,6 +198,41 @@ describe("TransformSchema (keyframes)", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts positionX and positionY", () => {
+    const result = Schema.safeParse({
+      positionX: 960,
+      positionY: 540,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts keyframed positionX and positionY", () => {
+    const result = Schema.safeParse({
+      positionX: [
+        { time: 0, value: 0 },
+        { time: 2, value: 1920 },
+      ],
+      positionY: 540,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects position with positionX", () => {
+    const result = Schema.safeParse({
+      position: [960, 540],
+      positionX: 960,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects position with positionY", () => {
+    const result = Schema.safeParse({
+      position: [960, 540],
+      positionY: 540,
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

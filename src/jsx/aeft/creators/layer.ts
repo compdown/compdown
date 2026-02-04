@@ -87,6 +87,8 @@ interface KeyframeDef {
 interface TransformDef {
   anchorPoint?: [number, number] | KeyframeDef[];
   position?: [number, number] | KeyframeDef[];
+  positionX?: number | KeyframeDef[];
+  positionY?: number | KeyframeDef[];
   scale?: [number, number] | KeyframeDef[];
   rotation?: number | KeyframeDef[];
   opacity?: number | KeyframeDef[];
@@ -349,6 +351,30 @@ function applyTransform(layer: Layer, transform: TransformDef): void {
     } else {
       //@ts-ignore
       pos.setValue(transform.position);
+    }
+  }
+  // Handle separate position dimensions
+  if (transform.positionX !== undefined || transform.positionY !== undefined) {
+    var posProp = group.property("ADBE Position") as Property;
+    posProp.dimensionsSeparated = true;
+
+    if (transform.positionX !== undefined) {
+      var posX = group.property("ADBE Position_0") as Property;
+      if (isKeyframeArray(transform.positionX)) {
+        applyKeyframes(posX, transform.positionX);
+      } else {
+        //@ts-ignore
+        posX.setValue(transform.positionX);
+      }
+    }
+    if (transform.positionY !== undefined) {
+      var posY = group.property("ADBE Position_1") as Property;
+      if (isKeyframeArray(transform.positionY)) {
+        applyKeyframes(posY, transform.positionY);
+      } else {
+        //@ts-ignore
+        posY.setValue(transform.positionY);
+      }
     }
   }
   if (transform.scale) {

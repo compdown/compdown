@@ -285,13 +285,17 @@ effects:
 
 Each transform property accepts either a static value or an array of keyframes (minimum 2).
 
-| Property    | Static type | Keyframe value | Description        |
-| ----------- | ----------- | -------------- | ------------------ |
-| anchorPoint | [x, y]      | [x, y]         | Anchor point       |
-| position    | [x, y]      | [x, y]         | Position           |
-| scale       | [x, y]      | [x, y]         | Scale (percent)    |
-| rotation    | number      | number         | Rotation (degrees) |
-| opacity     | number      | number (0-100) | Opacity            |
+| Property    | Static type | Keyframe value | Description                    |
+| ----------- | ----------- | -------------- | ------------------------------ |
+| anchorPoint | [x, y]      | [x, y]         | Anchor point                   |
+| position    | [x, y]      | [x, y]         | Position (combined X/Y)        |
+| positionX   | number      | number         | X position (separate)          |
+| positionY   | number      | number         | Y position (separate)          |
+| scale       | [x, y]      | [x, y]         | Scale (percent)                |
+| rotation    | number      | number         | Rotation (degrees)             |
+| opacity     | number      | number (0-100) | Opacity                        |
+
+> **Note:** Use either `position` OR `positionX`/`positionY`, not both. Separate dimensions allow independent easing per axis.
 
 **Keyframe syntax**: each keyframe is an object with `time` (seconds, >= 0), `value`, and optional `easing`. You can mix static and keyframed properties on the same layer.
 

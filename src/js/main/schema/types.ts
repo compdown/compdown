@@ -36,6 +36,12 @@ export const TransformSchema = z
     position: z
       .union([z.tuple([z.number(), z.number()]), z.array(TupleKeyframeSchema).min(2)])
       .optional(),
+    positionX: z
+      .union([z.number(), z.array(ScalarKeyframeSchema).min(2)])
+      .optional(),
+    positionY: z
+      .union([z.number(), z.array(ScalarKeyframeSchema).min(2)])
+      .optional(),
     scale: z
       .union([z.tuple([z.number(), z.number()]), z.array(TupleKeyframeSchema).min(2)])
       .optional(),
@@ -47,6 +53,16 @@ export const TransformSchema = z
       .optional(),
   })
   .strict()
+  .refine(
+    (t) => {
+      // Can't use both position and positionX/positionY
+      if (t.position !== undefined && (t.positionX !== undefined || t.positionY !== undefined)) {
+        return false;
+      }
+      return true;
+    },
+    { message: "Cannot use 'position' together with 'positionX' or 'positionY'" }
+  )
   .optional();
 
 export type Transform = z.infer<typeof TransformSchema>;

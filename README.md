@@ -195,6 +195,7 @@ compositions:
 | color       | string | no       | `"000000"` | Background hex color   |
 | folder      | string | no       |            | Target project folder  |
 | layers      | array  | no       |            | List of layers (below) |
+| markers     | array  | no       |            | List of markers (below)|
 
 #### `layers`
 
@@ -215,6 +216,12 @@ Each layer must have exactly one of `type`, `file`, or `comp`.
 | text                  | string           | yes for `text`      | Text content                             |
 | fontSize              | number           | no                  | Font size                                |
 | font                  | string           | no                  | Font family name                         |
+| fillColor             | string           | no                  | Text fill color (6-char hex)             |
+| strokeColor           | string           | no                  | Text stroke color (6-char hex)           |
+| strokeWidth           | number           | no                  | Text stroke width                        |
+| tracking              | number           | no                  | Character spacing                        |
+| leading               | number           | no                  | Line spacing                             |
+| justification         | string           | no                  | `left`, `center`, `right`                |
 | enabled               | boolean          | no                  | Layer visibility                         |
 | shy                   | boolean          | no                  | Shy flag                                 |
 | locked                | boolean          | no                  | Lock flag                                |
@@ -286,21 +293,60 @@ Each transform property accepts either a static value or an array of keyframes (
 | rotation    | number      | number         | Rotation (degrees) |
 | opacity     | number      | number (0-100) | Opacity            |
 
-**Keyframe syntax**: each keyframe is an object with `time` (seconds, >= 0) and `value`. You can mix static and keyframed properties on the same layer.
+**Keyframe syntax**: each keyframe is an object with `time` (seconds, >= 0), `value`, and optional `easing`. You can mix static and keyframed properties on the same layer.
 
 ```yaml
 transform:
   rotation: 45 # static
-  position: # keyframed
+  position: # keyframed with easing
     - time: 0
       value: [0, 0]
+      easing: easeOut
     - time: 5
       value: [1920, 1080]
+      easing: easeIn
   opacity:
     - time: 0
       value: 0
     - time: 2
       value: 100
+```
+
+**Easing types**: `linear` (default), `easeIn`, `easeOut`, `easeInOut`, `hold`
+
+| Easing | Description |
+|--------|-------------|
+| `linear` | Constant speed (default, no need to specify) |
+| `easeIn` | Slow arrival at this keyframe |
+| `easeOut` | Slow departure from this keyframe |
+| `easeInOut` | Slow arrival and departure |
+| `hold` | Hold value until next keyframe (no interpolation) |
+
+#### `markers`
+
+Optional array on compositions. Each marker has:
+
+| Property | Type   | Required | Description                        |
+|----------|--------|----------|------------------------------------|
+| time     | number | yes      | Marker time in seconds             |
+| comment  | string | no       | Marker comment/label               |
+| duration | number | no       | Marker duration (for range markers)|
+| chapter  | string | no       | Chapter name                       |
+| url      | string | no       | URL link                           |
+| label    | int    | no       | Color label (0-16)                 |
+
+```yaml
+compositions:
+  - name: My Comp
+    markers:
+      - time: 0
+        comment: "Intro"
+      - time: 5
+        comment: "Main Content"
+        duration: 10
+      - time: 15
+        comment: "Outro"
+        chapter: "Credits"
 ```
 
 #### Blending modes

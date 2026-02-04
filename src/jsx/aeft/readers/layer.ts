@@ -73,24 +73,87 @@ trackMatteTypeNames[TrackMatteType.ALPHA_INVERTED] = "alphaInverted";
 trackMatteTypeNames[TrackMatteType.LUMA] = "luma";
 trackMatteTypeNames[TrackMatteType.LUMA_INVERTED] = "lumaInverted";
 
+/**
+ * Reverse-map AE ParagraphJustification enum to YAML string name.
+ */
+var justificationNames: { [key: number]: string } = {};
+justificationNames[ParagraphJustification.LEFT_JUSTIFY] = "left";
+justificationNames[ParagraphJustification.CENTER_JUSTIFY] = "center";
+justificationNames[ParagraphJustification.RIGHT_JUSTIFY] = "right";
+
 function toHex(n: number): string {
   var hex = Math.round(n * 255).toString(16);
   return hex.length === 1 ? "0" + hex : hex;
 }
 
 /**
- * Read keyframes from a property, returning an array of {time, value} objects.
+ * Determine the easing type from a keyframe's interpolation settings.
+ * Returns undefined for linear (default), or the easing name.
+ */
+function getEasingType(prop: Property, keyIndex: number): string | undefined {
+  var inType = prop.keyInInterpolationType(keyIndex);
+  var outType = prop.keyOutInterpolationType(keyIndex);
+
+  // Hold interpolation
+  if (outType === KeyframeInterpolationType.HOLD) {
+    return "hold";
+  }
+
+  // Linear interpolation (explicit)
+  if (inType === KeyframeInterpolationType.LINEAR && outType === KeyframeInterpolationType.LINEAR) {
+    return undefined; // default, don't export
+  }
+
+  // Bezier - check temporal ease to determine ease type
+  if (inType === KeyframeInterpolationType.BEZIER || outType === KeyframeInterpolationType.BEZIER) {
+    var inEase = prop.keyInTemporalEase(keyIndex);
+    var outEase = prop.keyOutTemporalEase(keyIndex);
+
+    // Check influence values (first dimension is representative)
+    var inInfluence = inEase[0].influence;
+    var outInfluence = outEase[0].influence;
+
+    // Threshold for considering ease "significant"
+    var threshold = 10;
+
+    var hasEaseIn = inInfluence > threshold;
+    var hasEaseOut = outInfluence > threshold;
+
+    if (hasEaseIn && hasEaseOut) {
+      return "easeInOut";
+    } else if (hasEaseIn) {
+      return "easeIn";
+    } else if (hasEaseOut) {
+      return "easeOut";
+    }
+  }
+
+  return undefined; // linear/default
+}
+
+/**
+ * Read keyframes from a property, returning an array of {time, value, easing?} objects.
  */
 function readKeyframes(prop: Property): object[] {
   var keyframes: object[] = [];
   for (var i = 1; i <= prop.numKeys; i++) {
     var val = prop.keyValue(i);
     var time = Math.round(prop.keyTime(i) * 1000) / 1000;
+    var easing = getEasingType(prop, i);
+
+    var kf: { [key: string]: any } = { time: time };
+
     if (val instanceof Array) {
-      keyframes.push({ time: time, value: [Math.round(val[0]), Math.round(val[1])] });
+      kf.value = [Math.round(val[0]), Math.round(val[1])];
     } else {
-      keyframes.push({ time: time, value: Math.round(val as number) });
+      kf.value = Math.round(val as number);
     }
+
+    if (easing) {
+      kf.easing = easing;
+    }
+
+    keyframes.push(kf);
   }
   return keyframes;
 }
@@ -104,15 +167,25 @@ function readEffectKeyframes(prop: Property): object[] {
   for (var i = 1; i <= prop.numKeys; i++) {
     var val = prop.keyValue(i);
     var time = Math.round(prop.keyTime(i) * 1000) / 1000;
+    var easing = getEasingType(prop, i);
+
+    var kf: { [key: string]: any } = { time: time };
+
     if (val instanceof Array) {
       var arr: number[] = [];
       for (var j = 0; j < val.length; j++) {
         arr.push(Math.round(val[j] * 1000) / 1000);
       }
-      keyframes.push({ time: time, value: arr });
+      kf.value = arr;
     } else {
-      keyframes.push({ time: time, value: Math.round((val as number) * 1000) / 1000 });
+      kf.value = Math.round((val as number) * 1000) / 1000;
     }
+
+    if (easing) {
+      kf.easing = easing;
+    }
+
+    keyframes.push(kf);
   }
   return keyframes;
 }
@@ -188,6 +261,21 @@ function readTransform(layer: Layer): object | null {
 
   var group = layer.property("ADBE Transform Group");
 
+  var anchor = group.property("ADBE Anchor Point") as Property;
+  if (anchor) {
+    if (anchor.numKeys > 0) {
+      transform.anchorPoint = readKeyframes(anchor);
+      hasValues = true;
+    } else {
+      var anchorVal = anchor.value as number[];
+      // Only include if not default [0, 0]
+      if (anchorVal[0] !== 0 || anchorVal[1] !== 0) {
+        transform.anchorPoint = [Math.round(anchorVal[0]), Math.round(anchorVal[1])];
+        hasValues = true;
+      }
+    }
+  }
+
   var pos = group.property("ADBE Position") as Property;
   if (pos) {
     if (pos.numKeys > 0) {
@@ -258,6 +346,33 @@ export function readLayer(layer: Layer): object {
       result.text = textDoc.text;
       if (textDoc.fontSize) result.fontSize = textDoc.fontSize;
       if (textDoc.font) result.font = textDoc.font;
+
+      // Text styling
+      if (textDoc.fillColor) {
+        var fc = textDoc.fillColor;
+        var fillHex = toHex(fc[0]) + toHex(fc[1]) + toHex(fc[2]);
+        // Only export if not white (common default)
+        if (fillHex !== "ffffff") {
+          result.fillColor = fillHex;
+        }
+      }
+      if (textDoc.applyStroke && textDoc.strokeColor) {
+        var sc = textDoc.strokeColor;
+        result.strokeColor = toHex(sc[0]) + toHex(sc[1]) + toHex(sc[2]);
+      }
+      if (textDoc.applyStroke && textDoc.strokeWidth > 0) {
+        result.strokeWidth = textDoc.strokeWidth;
+      }
+      if (textDoc.tracking !== 0) {
+        result.tracking = textDoc.tracking;
+      }
+      if (textDoc.leading) {
+        result.leading = textDoc.leading;
+      }
+      var justName = justificationNames[textDoc.justification as number];
+      if (justName && justName !== "left") {
+        result.justification = justName;
+      }
     }
   } else if (layer.source && layer.source instanceof CompItem) {
     // Layer referencing a comp

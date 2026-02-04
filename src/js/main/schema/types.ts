@@ -1,20 +1,29 @@
 import { z } from "zod";
 
+// --- Easing ---
+
+export const EasingSchema = z.enum(["linear", "easeIn", "easeOut", "easeInOut", "hold"]);
+
+export type Easing = z.infer<typeof EasingSchema>;
+
 // --- Keyframes ---
 
 export const TupleKeyframeSchema = z.object({
   time: z.number().min(0),
   value: z.tuple([z.number(), z.number()]),
+  easing: EasingSchema.optional(),
 });
 
 export const ScalarKeyframeSchema = z.object({
   time: z.number().min(0),
   value: z.number(),
+  easing: EasingSchema.optional(),
 });
 
 export const OpacityKeyframeSchema = z.object({
   time: z.number().min(0),
   value: z.number().min(0).max(100),
+  easing: EasingSchema.optional(),
 });
 
 // --- Transform ---
@@ -47,6 +56,7 @@ export type Transform = z.infer<typeof TransformSchema>;
 export const EffectKeyframeSchema = z.object({
   time: z.number().min(0),
   value: z.union([z.number(), z.boolean(), z.array(z.number())]),
+  easing: EasingSchema.optional(),
 });
 
 export const EffectPropertyValueSchema = z.union([
@@ -145,6 +155,18 @@ export const LayerSchema = z
     text: z.string().optional(),
     fontSize: z.number().positive().optional(),
     font: z.string().optional(),
+    fillColor: z
+      .string()
+      .regex(/^[0-9a-fA-F]{6}$/, "Must be a 6-character hex color (e.g. FFFFFF)")
+      .optional(),
+    strokeColor: z
+      .string()
+      .regex(/^[0-9a-fA-F]{6}$/, "Must be a 6-character hex color (e.g. 000000)")
+      .optional(),
+    strokeWidth: z.number().min(0).optional(),
+    tracking: z.number().optional(),
+    leading: z.number().positive().optional(),
+    justification: z.enum(["left", "center", "right"]).optional(),
 
     // Layer properties
     enabled: z.boolean().optional(),
@@ -227,6 +249,19 @@ export const EssentialGraphicsItemSchema = z.union([
 
 export type EssentialGraphicsItem = z.infer<typeof EssentialGraphicsItemSchema>;
 
+// --- Markers ---
+
+export const MarkerSchema = z.object({
+  time: z.number().min(0),
+  comment: z.string().optional(),
+  duration: z.number().min(0).optional(),
+  chapter: z.string().optional(),
+  url: z.string().optional(),
+  label: z.number().int().min(0).max(16).optional(),
+});
+
+export type Marker = z.infer<typeof MarkerSchema>;
+
 // --- Composition ---
 
 export const CompSchema = z.object({
@@ -243,6 +278,7 @@ export const CompSchema = z.object({
   folder: z.string().optional(),
   layers: z.array(LayerSchema).optional(),
   essentialGraphics: z.array(EssentialGraphicsItemSchema).optional(),
+  markers: z.array(MarkerSchema).optional(),
 });
 
 export type Comp = z.infer<typeof CompSchema>;

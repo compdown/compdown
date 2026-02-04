@@ -81,6 +81,7 @@ var trackMatteTypes: { [key: string]: TrackMatteType } = {
 interface KeyframeDef {
   time: number;
   value: number | [number, number];
+  easing?: string;
 }
 
 interface TransformDef {
@@ -94,6 +95,7 @@ interface TransformDef {
 interface EffectKeyframeDef {
   time: number;
   value: number | boolean | number[];
+  easing?: string;
 }
 
 interface EffectDef {
@@ -117,6 +119,12 @@ interface LayerDef {
   text?: string;
   fontSize?: number;
   font?: string;
+  fillColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  tracking?: number;
+  leading?: number;
+  justification?: string;
   enabled?: boolean;
   shy?: boolean;
   locked?: boolean;
@@ -153,11 +161,84 @@ function isKeyframeArray(val: any): val is KeyframeDef[] {
 }
 
 /**
+ * Apply easing to a keyframe.
+ * @param prop The property containing the keyframe
+ * @param keyIndex 1-based keyframe index
+ * @param easing The easing type: "linear", "easeIn", "easeOut", "easeInOut", "hold"
+ */
+function applyEasing(prop: Property, keyIndex: number, easing: string): void {
+  if (easing === "hold") {
+    prop.setInterpolationTypeAtKey(
+      keyIndex,
+      KeyframeInterpolationType.HOLD,
+      KeyframeInterpolationType.HOLD
+    );
+    return;
+  }
+
+  if (easing === "linear") {
+    prop.setInterpolationTypeAtKey(
+      keyIndex,
+      KeyframeInterpolationType.LINEAR,
+      KeyframeInterpolationType.LINEAR
+    );
+    return;
+  }
+
+  // For bezier easing, we need to determine the number of dimensions
+  // Use the keyframe value to figure out the dimension count
+  var keyVal = prop.keyValue(keyIndex);
+  var dimensions = 1;
+  if (keyVal instanceof Array) {
+    dimensions = keyVal.length;
+  }
+
+  // Create ease objects for each dimension
+  // Influence of 33% gives a natural ease curve
+  var easeInfluence = 33.33;
+  var linearEase: KeyframeEase[] = [];
+  var easedEase: KeyframeEase[] = [];
+
+  for (var d = 0; d < dimensions; d++) {
+    linearEase.push(new KeyframeEase(0, 0.1)); // ~linear: minimal influence
+    easedEase.push(new KeyframeEase(0, easeInfluence));
+  }
+
+  // Set interpolation type to bezier first
+  prop.setInterpolationTypeAtKey(
+    keyIndex,
+    KeyframeInterpolationType.BEZIER,
+    KeyframeInterpolationType.BEZIER
+  );
+
+  // Apply the appropriate ease
+  if (easing === "easeIn") {
+    // Slow down arriving at this keyframe (incoming ease)
+    prop.setTemporalEaseAtKey(keyIndex, easedEase, linearEase);
+  } else if (easing === "easeOut") {
+    // Slow down leaving this keyframe (outgoing ease)
+    prop.setTemporalEaseAtKey(keyIndex, linearEase, easedEase);
+  } else if (easing === "easeInOut") {
+    // Slow both incoming and outgoing
+    prop.setTemporalEaseAtKey(keyIndex, easedEase, easedEase);
+  }
+}
+
+/**
  * Apply keyframes to a property.
  */
 function applyKeyframes(prop: Property, keyframes: KeyframeDef[]): void {
+  // First pass: set all keyframe values
   for (var k = 0; k < keyframes.length; k++) {
     prop.setValueAtTime(keyframes[k].time, keyframes[k].value);
+  }
+
+  // Second pass: apply easing (keyframe indices are 1-based in AE)
+  for (var k = 0; k < keyframes.length; k++) {
+    var easing = keyframes[k].easing;
+    if (easing) {
+      applyEasing(prop, k + 1, easing);
+    }
   }
 }
 
@@ -224,8 +305,15 @@ function applyEffects(layer: Layer, effects: EffectDef[]): void {
           if (!prop) continue;
 
           if (isEffectKeyframeArray(propVal)) {
+            // First pass: set values
             for (var k = 0; k < propVal.length; k++) {
               prop.setValueAtTime(propVal[k].time, boolToNum(propVal[k].value));
+            }
+            // Second pass: apply easing
+            for (var k = 0; k < propVal.length; k++) {
+              if (propVal[k].easing) {
+                applyEasing(prop, k + 1, propVal[k].easing);
+              }
             }
           } else {
             //@ts-ignore
@@ -366,13 +454,51 @@ export const createLayers = (
         }
         case "text": {
           newLayer = comp.layers.addText(layerDef.text || "");
-          if (layerDef.fontSize || layerDef.font) {
+          var hasTextStyles =
+            layerDef.fontSize ||
+            layerDef.font ||
+            layerDef.fillColor ||
+            layerDef.strokeColor ||
+            layerDef.strokeWidth !== undefined ||
+            layerDef.tracking !== undefined ||
+            layerDef.leading ||
+            layerDef.justification;
+          if (hasTextStyles) {
             var textProp = newLayer
               .property("ADBE Text Properties")
               .property("ADBE Text Document") as Property;
             var textDoc = textProp.value as TextDocument;
             if (layerDef.fontSize) textDoc.fontSize = layerDef.fontSize;
             if (layerDef.font) textDoc.font = layerDef.font;
+            if (layerDef.fillColor) {
+              var fr = parseInt(layerDef.fillColor.substring(0, 2), 16) / 255;
+              var fg = parseInt(layerDef.fillColor.substring(2, 4), 16) / 255;
+              var fb = parseInt(layerDef.fillColor.substring(4, 6), 16) / 255;
+              textDoc.fillColor = [fr, fg, fb];
+            }
+            if (layerDef.strokeColor) {
+              var sr = parseInt(layerDef.strokeColor.substring(0, 2), 16) / 255;
+              var sg = parseInt(layerDef.strokeColor.substring(2, 4), 16) / 255;
+              var sb = parseInt(layerDef.strokeColor.substring(4, 6), 16) / 255;
+              textDoc.strokeColor = [sr, sg, sb];
+              textDoc.applyStroke = true;
+            }
+            if (layerDef.strokeWidth !== undefined) {
+              textDoc.strokeWidth = layerDef.strokeWidth;
+              textDoc.applyStroke = true;
+            }
+            if (layerDef.tracking !== undefined) textDoc.tracking = layerDef.tracking;
+            if (layerDef.leading) textDoc.leading = layerDef.leading;
+            if (layerDef.justification) {
+              var justMap: { [key: string]: ParagraphJustification } = {
+                left: ParagraphJustification.LEFT_JUSTIFY,
+                center: ParagraphJustification.CENTER_JUSTIFY,
+                right: ParagraphJustification.RIGHT_JUSTIFY,
+              };
+              if (justMap[layerDef.justification]) {
+                textDoc.justification = justMap[layerDef.justification];
+              }
+            }
             textProp.setValue(textDoc);
           }
           break;
@@ -446,8 +572,14 @@ export const createLayers = (
 
   // Second pass: set parenting (must happen after all layers exist)
   for (var j = 0; j < layers.length; j++) {
-    if (layers[j].parent && layerNameMap[layers[j].parent!]) {
-      layerNameMap[layers[j].name].parent = layerNameMap[layers[j].parent!];
+    if (layers[j].parent) {
+      var parentLayer = layerNameMap[layers[j].parent!];
+      if (!parentLayer) {
+        throw new Error(
+          "Parent layer '" + layers[j].parent + "' not found for layer '" + layers[j].name + "'"
+        );
+      }
+      layerNameMap[layers[j].name].parent = parentLayer;
     }
   }
 

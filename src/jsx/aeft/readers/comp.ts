@@ -1,5 +1,6 @@
 import { readAllLayers, readSelectedLayers } from "./layer";
 import { readEssentialGraphics } from "./essentialGraphics";
+import { readMarkers } from "./markers";
 
 function toHex(n: number): string {
   var hex = Math.round(n * 255).toString(16);
@@ -37,6 +38,12 @@ export function readComp(comp: CompItem, selectionOnly: boolean): object {
   var egItems = readEssentialGraphics(comp);
   if (egItems && egItems.length > 0) {
     compData.essentialGraphics = egItems;
+  }
+
+  // Read markers (if any)
+  var markerItems = readMarkers(comp);
+  if (markerItems && markerItems.length > 0) {
+    compData.markers = markerItems;
   }
 
   return compData;

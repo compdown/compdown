@@ -4,6 +4,7 @@ import { importFiles } from "./creators/file";
 import { createComps } from "./creators/comp";
 import { createLayers } from "./creators/layer";
 import { addEssentialGraphics } from "./creators/essentialGraphics";
+import { addMarkers } from "./creators/markers";
 import { readComp, collectFiles } from "./readers/comp";
 
 /**
@@ -29,6 +30,14 @@ export const createFromDocument = (doc: {
     folder?: string;
     layers?: any[];
     essentialGraphics?: Array<string | { property: string; name?: string }>;
+    markers?: Array<{
+      time: number;
+      comment?: string;
+      duration?: number;
+      chapter?: string;
+      url?: string;
+      label?: number;
+    }>;
   }>;
 }): { created: { folders: number; files: number; compositions: number; layers: number } } => {
   app.beginUndoGroup("Compdown: Create");
@@ -68,6 +77,11 @@ export const createFromDocument = (doc: {
       // 5. Essential Graphics (after layers are created)
       if (compDef.essentialGraphics && compDef.essentialGraphics.length > 0) {
         addEssentialGraphics(comp, compDef.essentialGraphics);
+      }
+
+      // 6. Markers
+      if (compDef.markers && compDef.markers.length > 0) {
+        addMarkers(comp, compDef.markers);
       }
     }
   }

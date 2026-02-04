@@ -17,6 +17,8 @@ import {
   FrameBlendingTypeSchema,
   TrackMatteTypeSchema,
   EssentialGraphicsItemSchema,
+  EasingSchema,
+  MarkerSchema,
 } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -199,6 +201,85 @@ describe("TransformSchema (keyframes)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// EasingSchema
+// ---------------------------------------------------------------------------
+
+describe("EasingSchema", () => {
+  it("accepts valid easing types", () => {
+    for (const easing of ["linear", "easeIn", "easeOut", "easeInOut", "hold"]) {
+      expect(EasingSchema.safeParse(easing).success).toBe(true);
+    }
+  });
+
+  it("rejects invalid easing type", () => {
+    expect(EasingSchema.safeParse("bounce").success).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Keyframes with easing
+// ---------------------------------------------------------------------------
+
+describe("Keyframes with easing", () => {
+  it("accepts keyframed position with easing", () => {
+    const Schema = TransformSchema.unwrap();
+    const result = Schema.safeParse({
+      position: [
+        { time: 0, value: [0, 0], easing: "easeOut" },
+        { time: 2, value: [1920, 1080], easing: "easeIn" },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts keyframed rotation with easeInOut", () => {
+    const Schema = TransformSchema.unwrap();
+    const result = Schema.safeParse({
+      rotation: [
+        { time: 0, value: 0, easing: "easeInOut" },
+        { time: 1, value: 360 },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts keyframed opacity with hold", () => {
+    const Schema = TransformSchema.unwrap();
+    const result = Schema.safeParse({
+      opacity: [
+        { time: 0, value: 100, easing: "hold" },
+        { time: 2, value: 0 },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid easing on keyframe", () => {
+    const Schema = TransformSchema.unwrap();
+    const result = Schema.safeParse({
+      position: [
+        { time: 0, value: [0, 0], easing: "invalid" },
+        { time: 2, value: [100, 100] },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts effect keyframes with easing", () => {
+    const result = EffectSchema.safeParse({
+      name: "Blur",
+      properties: {
+        Blurriness: [
+          { time: 0, value: 0, easing: "easeOut" },
+          { time: 2, value: 50, easing: "easeIn" },
+        ],
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // BlendingModeSchema
 // ---------------------------------------------------------------------------
 
@@ -327,6 +408,53 @@ describe("LayerSchema", () => {
     });
     expect(result.success).toBe(false);
     expect(result.error!.issues.some((i) => i.message.includes("text"))).toBe(true);
+  });
+
+  it("accepts a text layer with styling properties", () => {
+    const result = LayerSchema.safeParse({
+      name: "Styled Text",
+      type: "text",
+      text: "Hello",
+      fontSize: 72,
+      font: "Arial",
+      fillColor: "FF0000",
+      strokeColor: "000000",
+      strokeWidth: 2,
+      tracking: 50,
+      leading: 80,
+      justification: "center",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts text layer with only fill color", () => {
+    const result = LayerSchema.safeParse({
+      name: "Red Text",
+      type: "text",
+      text: "Hello",
+      fillColor: "FF0000",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid justification", () => {
+    const result = LayerSchema.safeParse({
+      name: "Text",
+      type: "text",
+      text: "Hello",
+      justification: "full",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid fill color format", () => {
+    const result = LayerSchema.safeParse({
+      name: "Text",
+      type: "text",
+      text: "Hello",
+      fillColor: "#FF0000",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects an invalid hex color", () => {
@@ -822,6 +950,101 @@ describe("CompSchema", () => {
       name: "Comp",
       essentialGraphics: [123],
     });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts comp with markers", () => {
+    const result = CompSchema.safeParse({
+      name: "Comp",
+      markers: [
+        { time: 0, comment: "Start" },
+        { time: 5, comment: "Middle", duration: 2 },
+        { time: 10, comment: "End" },
+      ],
+    });
+    expect(result.success).toBe(true);
+    expect(result.data!.markers).toHaveLength(3);
+  });
+
+  it("accepts markers with all properties", () => {
+    const result = CompSchema.safeParse({
+      name: "Comp",
+      markers: [
+        {
+          time: 1,
+          comment: "Chapter 1",
+          duration: 5,
+          chapter: "Introduction",
+          url: "https://example.com",
+          label: 4,
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts markers with only time", () => {
+    const result = CompSchema.safeParse({
+      name: "Comp",
+      markers: [{ time: 2.5 }],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MarkerSchema
+// ---------------------------------------------------------------------------
+
+describe("MarkerSchema", () => {
+  it("accepts a minimal marker with just time", () => {
+    const result = MarkerSchema.safeParse({ time: 0 });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a marker with comment", () => {
+    const result = MarkerSchema.safeParse({
+      time: 1.5,
+      comment: "Scene change",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a marker with duration", () => {
+    const result = MarkerSchema.safeParse({
+      time: 0,
+      comment: "Intro",
+      duration: 3,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a marker with chapter and url", () => {
+    const result = MarkerSchema.safeParse({
+      time: 10,
+      chapter: "Credits",
+      url: "https://example.com/credits",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects negative time", () => {
+    const result = MarkerSchema.safeParse({ time: -1 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects negative duration", () => {
+    const result = MarkerSchema.safeParse({ time: 0, duration: -1 });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts label in valid range", () => {
+    const result = MarkerSchema.safeParse({ time: 0, label: 8 });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects label out of range", () => {
+    const result = MarkerSchema.safeParse({ time: 0, label: 20 });
     expect(result.success).toBe(false);
   });
 });

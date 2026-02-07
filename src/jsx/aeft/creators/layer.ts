@@ -942,6 +942,15 @@ export const createLayers = (
       applyMasks(newLayer as AVLayer, layerDef.masks);
     }
 
+    // Audio-only layers: ensure audio is enabled (file-based)
+    if (layerDef.type === "audio") {
+      try {
+        newLayer.audioEnabled = true;
+      } catch (e) {
+        // ignore if not supported
+      }
+    }
+
     layerNameMap[layerDef.name] = newLayer;
   }
 

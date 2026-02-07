@@ -392,7 +392,9 @@ export const BlendingModeSchema = z
 export const LayerSchema = z
   .object({
     name: z.string().min(1),
-    type: z.enum(["solid", "null", "adjustment", "text", "camera", "light", "shape"]).optional(),
+    type: z
+      .enum(["solid", "null", "adjustment", "text", "camera", "light", "shape", "audio"])
+      .optional(),
     file: z.union([z.string(), z.number()]).optional(),
     comp: z.string().optional(),
 
@@ -494,11 +496,14 @@ export const LayerSchema = z
       const has = [layer.type, layer.file, layer.comp].filter(
         (v) => v !== undefined
       ).length;
+      if (layer.type === "audio") {
+        return layer.file !== undefined && layer.comp === undefined;
+      }
       return has === 1;
     },
     {
       message:
-        "Layer must have exactly one of 'type', 'file', or 'comp' specified",
+        "Layer must have exactly one of 'type', 'file', or 'comp' specified (audio requires 'file')",
     }
   )
   .refine(

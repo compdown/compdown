@@ -83,8 +83,9 @@ Create camera and light layers with full property support.
 **Status:** Done
 Add masks to layers with animatable paths.
 
-### Audio layers
-Create standalone audio layers (not just imported files).
+### ~~Audio layers~~
+**Status:** Done
+Create audio layers from file references.
 
 ### ~~Separate position dimensions~~
 **Status:** Done

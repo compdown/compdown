@@ -18,7 +18,7 @@ It also allows you to export existing comps back into YAML.
 ### After Effects
 
 - **Project structure**: Define **folders**, **files**, and **compositions** in YAML; creation order is folders → files → compositions → layers
-- **Layer types**: Solids, nulls, adjustment layers, text layers, shape layers, camera layers, light layers, file-based layers (footage, images), and comp-in-comp nesting via the `comp` key
+- **Layer types**: Solids, nulls, adjustment layers, text layers, shape layers, camera layers, light layers, audio layers, file-based layers (footage, images), and comp-in-comp nesting via the `comp` key
 - **Shape layers**: Parametric shapes (rectangle, ellipse, polygon, star) and custom paths with fill and stroke properties
 - **Masks**: Per-layer masks with modes, opacity, feather, expansion, and optional animated paths
 - **Keyframe animation**: Transform properties (position, scale, rotation, opacity, anchor point) with static values or arrays of keyframes
@@ -208,7 +208,7 @@ Each layer must have exactly one of `type`, `file`, or `comp`.
 | Property  | Type             | Required            | Description                              |
 | --------- | ---------------- | ------------------- | ---------------------------------------- |
 | name      | string           | yes                 | Layer name                               |
-| type      | string           | if no `file`/`comp` | `solid`, `null`, `adjustment`, `text`, `camera`, `light`, `shape` |
+| type      | string           | if no `file`/`comp` | `solid`, `null`, `adjustment`, `text`, `camera`, `light`, `shape`, `audio` |
 | file      | string \| number | if no `type`/`comp` | References a file `id`                   |
 | comp      | string           | if no `type`/`file` | References another comp by name          |
 | transform | object           | no                  | Transform properties (see below)         |
@@ -238,6 +238,12 @@ Each layer must have exactly one of `type`, `file`, or `comp`.
 | tracking      | number | no              | Character spacing                |
 | leading       | number | no              | Line spacing                     |
 | justification | string | no              | `left`, `center`, `right`        |
+
+##### Type-specific (audio)
+
+| Property | Type             | Required         | Description               |
+| -------- | ---------------- | ---------------- | ------------------------- |
+| file     | string \| number | yes for `audio`  | References a file `id`    |
 
 ##### Layer switches and toggles
 
@@ -373,6 +379,10 @@ layers:
         stroke:
           color: "00FFFF"
           width: 2
+
+  - name: VO
+    type: audio
+    file: voiceover-01
 ```
 
 > [!NOTE]

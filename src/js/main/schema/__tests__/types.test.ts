@@ -524,6 +524,23 @@ describe("LayerSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts an audio layer with file", () => {
+    const result = LayerSchema.safeParse({
+      name: "Audio",
+      type: "audio",
+      file: "audio1",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an audio layer without file", () => {
+    const result = LayerSchema.safeParse({
+      name: "Audio",
+      type: "audio",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects a layer with neither type, file, nor comp", () => {
     const result = LayerSchema.safeParse({ name: "Orphan" });
     expect(result.success).toBe(false);

@@ -266,11 +266,29 @@ export const StarShapeSchema = BaseShapeSchema.extend({
 
 export type StarShape = z.infer<typeof StarShapeSchema>;
 
+export const PathShapeSchema = BaseShapeSchema.extend({
+  type: z.literal("path"),
+  vertices: z.array(z.tuple([z.number(), z.number()])).min(2),
+  inTangents: z.array(z.tuple([z.number(), z.number()])).optional(),
+  outTangents: z.array(z.tuple([z.number(), z.number()])).optional(),
+  closed: z.boolean().optional(),
+}).refine(
+  (shape) => {
+    if (shape.inTangents && shape.inTangents.length !== shape.vertices.length) return false;
+    if (shape.outTangents && shape.outTangents.length !== shape.vertices.length) return false;
+    return true;
+  },
+  { message: "inTangents/outTangents must match vertices length" }
+);
+
+export type PathShape = z.infer<typeof PathShapeSchema>;
+
 export const ShapeSchema = z.discriminatedUnion("type", [
   RectangleShapeSchema,
   EllipseShapeSchema,
   PolygonShapeSchema,
   StarShapeSchema,
+  PathShapeSchema,
 ]);
 
 export type Shape = z.infer<typeof ShapeSchema>;

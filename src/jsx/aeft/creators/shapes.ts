@@ -55,7 +55,20 @@ interface StarShapeDef extends BaseShapeDef {
   rotation?: number | KeyframeDef[];
 }
 
-type ShapeDef = RectangleShapeDef | EllipseShapeDef | PolygonShapeDef | StarShapeDef;
+interface PathShapeDef extends BaseShapeDef {
+  type: "path";
+  vertices: [number, number][];
+  inTangents?: [number, number][];
+  outTangents?: [number, number][];
+  closed?: boolean;
+}
+
+type ShapeDef =
+  | RectangleShapeDef
+  | EllipseShapeDef
+  | PolygonShapeDef
+  | StarShapeDef
+  | PathShapeDef;
 
 /**
  * Parse hex color string to [r, g, b] array (0-1 range).
@@ -352,6 +365,36 @@ function addStar(groupContents: PropertyGroup, shapeDef: StarShapeDef): void {
 }
 
 /**
+ * Add a custom path shape to a group.
+ */
+function addPath(groupContents: PropertyGroup, shapeDef: PathShapeDef): void {
+  var pathGroup = groupContents.addProperty("ADBE Vector Shape - Group") as PropertyGroup;
+  var shapeProp = pathGroup.property("ADBE Vector Shape") as Property;
+
+  var vertices = shapeDef.vertices;
+  var inTangents = shapeDef.inTangents || [];
+  var outTangents = shapeDef.outTangents || [];
+
+  if (inTangents.length > 0 && inTangents.length !== vertices.length) {
+    throw new Error("inTangents must match vertices length for path shape");
+  }
+  if (outTangents.length > 0 && outTangents.length !== vertices.length) {
+    throw new Error("outTangents must match vertices length for path shape");
+  }
+
+  var shape = new Shape();
+  shape.vertices = vertices as any;
+  shape.inTangents =
+    (inTangents.length > 0 ? inTangents : vertices.map(() => [0, 0])) as any;
+  shape.outTangents =
+    (outTangents.length > 0 ? outTangents : vertices.map(() => [0, 0])) as any;
+  shape.closed = shapeDef.closed !== false;
+
+  //@ts-ignore
+  shapeProp.setValue(shape);
+}
+
+/**
  * Apply shapes to a shape layer.
  * Creates shape groups with parametric shapes (rect, ellipse, polygon, star)
  * and optional fill/stroke.
@@ -387,6 +430,21 @@ export function applyShapes(layer: ShapeLayer, shapes: ShapeDef[]): void {
       case "star":
         addStar(groupContents, shapeDef as StarShapeDef);
         break;
+      case "path":
+        addPath(groupContents, shapeDef as PathShapeDef);
+        break;
+    }
+
+    // For custom paths, apply position via group transform if provided.
+    if (shapeDef.type === "path" && shapeDef.position) {
+      var groupTransform = group.property("ADBE Vector Transform Group") as PropertyGroup;
+      var groupPos = groupTransform.property("ADBE Vector Position") as Property;
+      if (isKeyframeArray(shapeDef.position)) {
+        applyKeyframes(groupPos, shapeDef.position);
+      } else {
+        //@ts-ignore
+        groupPos.setValue(shapeDef.position);
+      }
     }
 
     // Add stroke first (so fill appears on top in layer panel, but renders correctly)

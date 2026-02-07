@@ -1109,6 +1109,31 @@ describe("ShapeSchema (discriminated union)", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts path shape", () => {
+    const result = ShapeSchema.safeParse({
+      type: "path",
+      vertices: [
+        [0, 0],
+        [100, 0],
+        [100, 100],
+      ],
+      closed: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects path shape with mismatched tangents", () => {
+    const result = ShapeSchema.safeParse({
+      type: "path",
+      vertices: [
+        [0, 0],
+        [100, 0],
+      ],
+      inTangents: [[0, 0]],
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects unknown shape type", () => {
     const result = ShapeSchema.safeParse({
       type: "bezier",

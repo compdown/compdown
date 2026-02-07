@@ -19,7 +19,7 @@ It also allows you to export existing comps back into YAML.
 
 - **Project structure**: Define **folders**, **files**, and **compositions** in YAML; creation order is folders → files → compositions → layers
 - **Layer types**: Solids, nulls, adjustment layers, text layers, shape layers, camera layers, light layers, file-based layers (footage, images), and comp-in-comp nesting via the `comp` key
-- **Shape layers**: Parametric shapes (rectangle, ellipse, polygon, star) with fill and stroke properties
+- **Shape layers**: Parametric shapes (rectangle, ellipse, polygon, star) and custom paths with fill and stroke properties
 - **Keyframe animation**: Transform properties (position, scale, rotation, opacity, anchor point) with static values or arrays of keyframes
 - **Layer effects**: Native effects on layers, with properties supporting static or animated values, by display name or `matchName`
 
@@ -298,7 +298,7 @@ Each layer must have exactly one of `type`, `file`, or `comp`.
 
 #### `shapes` (Shape Layers)
 
-Shape layers support parametric shapes (rectangle, ellipse, polygon, star) with fill and stroke. Each shape layer requires a `shapes` array with at least one shape.
+Shape layers support parametric shapes (rectangle, ellipse, polygon, star) and custom paths with fill and stroke. Each shape layer requires a `shapes` array with at least one shape.
 
 **Shape types and properties:**
 
@@ -308,6 +308,7 @@ Shape layers support parametric shapes (rectangle, ellipse, polygon, star) with 
 | `ellipse` | `size: [w, h]` | `position`, `fill`, `stroke`, `name` |
 | `polygon` | `points`, `outerRadius` | `position`, `outerRoundness`, `rotation`, `fill`, `stroke`, `name` |
 | `star` | `points`, `outerRadius`, `innerRadius` | `position`, `outerRoundness`, `innerRoundness`, `rotation`, `fill`, `stroke`, `name` |
+| `path` | `vertices` | `inTangents`, `outTangents`, `closed`, `position`, `fill`, `stroke`, `name` |
 
 **Fill and stroke:**
 
@@ -359,10 +360,22 @@ layers:
         innerRadius: 40
         fill:
           color: FFFF00
+
+      - type: path
+        name: Custom Path
+        vertices:
+          - [0, 0]
+          - [120, 0]
+          - [120, 80]
+          - [0, 80]
+        closed: true
+        stroke:
+          color: "00FFFF"
+          width: 2
 ```
 
 > [!NOTE]
-> Shape layers currently support parametric shapes only. Bezier paths are not yet supported.
+> For `path` shapes, `inTangents` and `outTangents` are optional. If omitted, tangents default to `[0, 0]`.
 
 #### `effects`
 

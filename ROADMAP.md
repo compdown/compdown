@@ -67,8 +67,9 @@ compositions:
 
 ## Future Features
 
-### Shape layers
-Create rectangles, ellipses, and custom paths via YAML.
+### ~~Shape layers (custom paths)~~
+**Status:** Done
+Create custom path shapes (Bezier) via YAML.
 
 ### ~~Expressions~~
 **Status:** Done

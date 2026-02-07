@@ -91,7 +91,8 @@ Create audio layers from file references.
 **Status:** Done
 Keyframe X and Y position independently via `positionX` and `positionY`.
 
-### Text animators
+### ~~Text animators~~
+**Status:** Done
 Per-character animation via text animators.
 
 ---

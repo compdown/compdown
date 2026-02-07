@@ -21,6 +21,7 @@ It also allows you to export existing comps back into YAML.
 - **Layer types**: Solids, nulls, adjustment layers, text layers, shape layers, camera layers, light layers, audio layers, file-based layers (footage, images), and comp-in-comp nesting via the `comp` key
 - **Shape layers**: Parametric shapes (rectangle, ellipse, polygon, star) and custom paths with fill and stroke properties
 - **Masks**: Per-layer masks with modes, opacity, feather, expansion, and optional animated paths
+- **Text animators**: Per-character animation via text animators (opacity/position/scale/rotation/etc.)
 - **Keyframe animation**: Transform properties (position, scale, rotation, opacity, anchor point) with static values or arrays of keyframes
 - **Layer effects**: Native effects on layers, with properties supporting static or animated values, by display name or `matchName`
 
@@ -441,6 +442,45 @@ layers:
             - [400, 200]
             - [400, 400]
             - [200, 400]
+```
+
+#### `textAnimators`
+
+Text animators are available on text layers and let you animate properties per-character.
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | no | Animator name |
+| `properties` | object | yes | Properties to animate (see below) |
+| `selector` | object | no | Range selector settings |
+
+**Animator properties (supported):**
+
+`opacity`, `position`, `scale`, `rotation`, `anchorPoint`, `tracking`
+
+**Selector properties (supported):**
+
+`start`, `end`, `offset`, `smoothness`
+
+**Example:**
+
+```yaml
+layers:
+  - name: Title
+    type: text
+    text: "Compdown"
+    textAnimators:
+      - name: Fade In
+        properties:
+          opacity:
+            - time: 0
+              value: 0
+            - time: 1
+              value: 100
+              easing: easeOut
+        selector:
+          start: 0
+          end: 100
 ```
 
 #### `effects`

@@ -135,6 +135,12 @@ interface LayerStyleDef {
   expressions?: { [key: string]: string };
 }
 
+interface TextAnimatorDef {
+  name?: string;
+  properties?: { [key: string]: number | number[] | EffectKeyframeDef[] };
+  selector?: { [key: string]: number | EffectKeyframeDef[] };
+}
+
 interface LayerDef {
   name: string;
   type?: string;
@@ -201,6 +207,8 @@ interface LayerDef {
   shapes?: any[];
   // Masks
   masks?: any[];
+  // Text animators
+  textAnimators?: TextAnimatorDef[];
 }
 
 /**
@@ -388,6 +396,96 @@ function applyEffects(layer: Layer, effects: EffectDef[]): void {
           }
         } catch (e) {
           // Some properties may not support expressions; skip silently
+        }
+      }
+    }
+  }
+}
+
+function applyTextAnimators(layer: TextLayer, animators: TextAnimatorDef[]): void {
+  if (!animators || animators.length === 0) return;
+
+  var textProps = layer.property("ADBE Text Properties") as PropertyGroup;
+  var animatorsGroup = textProps.property("ADBE Text Animators") as PropertyGroup;
+
+  var propMap: { [key: string]: string } = {
+    opacity: "ADBE Text Opacity",
+    position: "ADBE Text Position",
+    scale: "ADBE Text Scale",
+    rotation: "ADBE Text Rotation",
+    anchorPoint: "ADBE Text Anchor Point",
+    tracking: "ADBE Text Tracking",
+  };
+
+  var selectorMap: { [key: string]: string } = {
+    start: "ADBE Text Selector Start",
+    end: "ADBE Text Selector End",
+    offset: "ADBE Text Selector Offset",
+    smoothness: "ADBE Text Selector Smoothness",
+  };
+
+  for (var i = 0; i < animators.length; i++) {
+    var def = animators[i];
+    var animator = animatorsGroup.addProperty("ADBE Text Animator") as PropertyGroup;
+    if (def.name) animator.name = def.name;
+
+    var animatorProps = animator.property("ADBE Text Animator Properties") as PropertyGroup;
+    if (def.properties) {
+      for (var key in def.properties) {
+        if (!def.properties.hasOwnProperty(key)) continue;
+        var matchName = propMap[key];
+        if (!matchName) continue;
+        try {
+          var prop = animatorProps.property(matchName) as Property;
+          if (!prop) continue;
+          var val = def.properties[key];
+          if (isEffectKeyframeArray(val)) {
+            // First pass: set values
+            for (var k = 0; k < val.length; k++) {
+              prop.setValueAtTime(val[k].time, val[k].value);
+            }
+            // Second pass: apply easing
+            for (var k = 0; k < val.length; k++) {
+              if (val[k].easing) {
+                applyEasing(prop, k + 1, val[k].easing);
+              }
+            }
+          } else {
+            //@ts-ignore
+            prop.setValue(val);
+          }
+        } catch (e) {
+          // Some properties may not be settable; skip silently
+        }
+      }
+    }
+
+    if (def.selector) {
+      var selectors = animator.property("ADBE Text Selectors") as PropertyGroup;
+      var selector = selectors.addProperty("ADBE Text Selector") as PropertyGroup;
+      for (var sKey in def.selector) {
+        if (!def.selector.hasOwnProperty(sKey)) continue;
+        var selMatch = selectorMap[sKey];
+        if (!selMatch) continue;
+        try {
+          var selProp = selector.property(selMatch) as Property;
+          if (!selProp) continue;
+          var selVal = def.selector[sKey];
+          if (isEffectKeyframeArray(selVal)) {
+            for (var k = 0; k < selVal.length; k++) {
+              selProp.setValueAtTime(selVal[k].time, selVal[k].value);
+            }
+            for (var k = 0; k < selVal.length; k++) {
+              if (selVal[k].easing) {
+                applyEasing(selProp, k + 1, selVal[k].easing);
+              }
+            }
+          } else {
+            //@ts-ignore
+            selProp.setValue(selVal);
+          }
+        } catch (e) {
+          // Some properties may not be settable; skip silently
         }
       }
     }
@@ -940,6 +1038,11 @@ export const createLayers = (
     // Masks
     if (layerDef.masks && layerDef.masks.length > 0) {
       applyMasks(newLayer as AVLayer, layerDef.masks);
+    }
+
+    // Text animators
+    if (layerDef.textAnimators && layerDef.textAnimators.length > 0) {
+      applyTextAnimators(newLayer as TextLayer, layerDef.textAnimators);
     }
 
     // Audio-only layers: ensure audio is enabled (file-based)

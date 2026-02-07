@@ -335,6 +335,38 @@ export const MaskSchema = z.object({
 
 export type Mask = z.infer<typeof MaskSchema>;
 
+// --- Text Animators ---
+
+const TextAnimatorPropertiesSchema = z
+  .object({
+    opacity: z.union([z.number().min(0).max(100), z.array(OpacityKeyframeSchema).min(2)]).optional(),
+    position: z.union([z.tuple([z.number(), z.number()]), z.array(TupleKeyframeSchema).min(2)]).optional(),
+    scale: z.union([z.tuple([z.number(), z.number()]), z.array(TupleKeyframeSchema).min(2)]).optional(),
+    rotation: z.union([z.number(), z.array(ScalarKeyframeSchema).min(2)]).optional(),
+    anchorPoint: z.union([z.tuple([z.number(), z.number()]), z.array(TupleKeyframeSchema).min(2)]).optional(),
+    tracking: z.union([z.number(), z.array(ScalarKeyframeSchema).min(2)]).optional(),
+  })
+  .refine((props) => Object.keys(props).length > 0, {
+    message: "Text animator properties cannot be empty",
+  });
+
+const TextAnimatorSelectorSchema = z
+  .object({
+    start: z.union([z.number(), z.array(ScalarKeyframeSchema).min(2)]).optional(),
+    end: z.union([z.number(), z.array(ScalarKeyframeSchema).min(2)]).optional(),
+    offset: z.union([z.number(), z.array(ScalarKeyframeSchema).min(2)]).optional(),
+    smoothness: z.union([z.number(), z.array(ScalarKeyframeSchema).min(2)]).optional(),
+  })
+  .optional();
+
+export const TextAnimatorSchema = z.object({
+  name: z.string().optional(),
+  properties: TextAnimatorPropertiesSchema,
+  selector: TextAnimatorSelectorSchema,
+});
+
+export type TextAnimator = z.infer<typeof TextAnimatorSchema>;
+
 // --- Layer quality modes ---
 
 export const QualityModeSchema = z.enum(["best", "draft", "wireframe"]).optional();
@@ -453,6 +485,8 @@ export const LayerSchema = z
     shapes: z.array(ShapeSchema).optional(),
     // Masks
     masks: z.array(MaskSchema).optional(),
+    // Text animators (text layers)
+    textAnimators: z.array(TextAnimatorSchema).optional(),
 
     // Layer properties
     enabled: z.boolean().optional(),

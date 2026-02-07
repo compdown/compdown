@@ -1311,6 +1311,44 @@ describe("LayerSchema (masks)", () => {
   });
 });
 
+describe("TextAnimatorSchema", () => {
+  it("accepts a basic text animator", () => {
+    const result = TextAnimatorSchema.safeParse({
+      name: "Fade In",
+      properties: {
+        opacity: [
+          { time: 0, value: 0 },
+          { time: 1, value: 100, easing: "easeOut" },
+        ],
+      },
+      selector: {
+        start: 0,
+        end: 100,
+        offset: 0,
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("LayerSchema (text animators)", () => {
+  it("accepts a text layer with animators", () => {
+    const result = LayerSchema.safeParse({
+      name: "Title",
+      type: "text",
+      text: "Hello",
+      textAnimators: [
+        {
+          name: "Pop",
+          properties: { scale: [120, 120] },
+          selector: { start: 0, end: 100 },
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // QualityModeSchema
 // ---------------------------------------------------------------------------

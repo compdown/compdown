@@ -28,6 +28,9 @@ import {
   EllipseShapeSchema,
   PolygonShapeSchema,
   StarShapeSchema,
+  ShapeOperatorSchema,
+  MaskSchema,
+  TextAnimatorSchema,
 } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -904,6 +907,14 @@ describe("ShapeFillSchema", () => {
     const result = ShapeFillSchema.safeParse({ color: "FF0000", opacity: -10 });
     expect(result.success).toBe(false);
   });
+
+  it("rejects unsupported fill keys", () => {
+    const result = ShapeFillSchema.safeParse({
+      color: "FF0000",
+      gradient: { type: "linear" },
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("ShapeStrokeSchema", () => {
@@ -1175,6 +1186,50 @@ describe("ShapeSchema (discriminated union)", () => {
   });
 });
 
+describe("ShapeOperatorSchema", () => {
+  it("accepts trimPaths operator", () => {
+    const result = ShapeOperatorSchema.safeParse({
+      type: "trimPaths",
+      start: 0,
+      end: 100,
+      offset: 0,
+      trimMultipleShapes: "simultaneously",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts repeater operator with transform", () => {
+    const result = ShapeOperatorSchema.safeParse({
+      type: "repeater",
+      copies: 8,
+      offset: 0,
+      transform: {
+        position: [20, 0],
+        scale: [95, 95],
+        rotation: 15,
+        startOpacity: 100,
+        endOpacity: 20,
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts mergePaths operator", () => {
+    const result = ShapeOperatorSchema.safeParse({
+      type: "mergePaths",
+      mode: "excludeIntersections",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects unknown operator type", () => {
+    const result = ShapeOperatorSchema.safeParse({
+      type: "unknownOperator",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe("LayerSchema (shape layers)", () => {
   it("accepts a shape layer with shapes", () => {
     const result = LayerSchema.safeParse({
@@ -1255,6 +1310,25 @@ describe("LayerSchema (shape layers)", () => {
       type: "shape",
       shapes: [{ type: "rectangle", size: [100, 100], fill: { color: "FF0000" } }],
       effects: [{ name: "Gaussian Blur", properties: { Blurriness: 10 } }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts shape layer with operators", () => {
+    const result = LayerSchema.safeParse({
+      name: "Operator Shape",
+      type: "shape",
+      shapes: [
+        {
+          type: "rectangle",
+          size: [400, 100],
+          fill: { color: "FF5500" },
+          operators: [
+            { type: "trimPaths", end: 85 },
+            { type: "zigZag", size: 4, ridgesPerSegment: 8, points: "smooth" },
+          ],
+        },
+      ],
     });
     expect(result.success).toBe(true);
   });

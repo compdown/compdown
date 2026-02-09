@@ -186,6 +186,253 @@ function readPolystar(polystarProp: PropertyGroup): object {
   return result;
 }
 
+function readTrimPaths(trimProp: PropertyGroup): object {
+  var result: { [key: string]: any } = { type: "trimPaths" };
+
+  var start = trimProp.property("ADBE Vector Trim Start") as Property;
+  if (start) result.start = start.value as number;
+
+  var end = trimProp.property("ADBE Vector Trim End") as Property;
+  if (end) result.end = end.value as number;
+
+  var offset = trimProp.property("ADBE Vector Trim Offset") as Property;
+  if (offset) result.offset = offset.value as number;
+
+  var trimType = trimProp.property("ADBE Vector Trim Type") as Property;
+  if (trimType) {
+    result.trimMultipleShapes = (trimType.value as number) === 2 ? "individually" : "simultaneously";
+  }
+
+  return result;
+}
+
+function readZigZag(zigZagProp: PropertyGroup): object {
+  var result: { [key: string]: any } = { type: "zigZag" };
+
+  var size = zigZagProp.property("ADBE Vector Zigzag Size") as Property;
+  if (size) result.size = size.value as number;
+
+  var ridges = zigZagProp.property("ADBE Vector Zigzag Detail") as Property;
+  if (ridges) result.ridgesPerSegment = ridges.value as number;
+
+  var points = zigZagProp.property("ADBE Vector Zigzag Points") as Property;
+  if (points) result.points = (points.value as number) === 2 ? "smooth" : "corner";
+
+  return result;
+}
+
+function readRepeater(repeaterProp: PropertyGroup): object {
+  var result: { [key: string]: any } = { type: "repeater" };
+
+  var copies = repeaterProp.property("ADBE Vector Repeater Copies") as Property;
+  if (copies) result.copies = copies.value as number;
+
+  var offset = repeaterProp.property("ADBE Vector Repeater Offset") as Property;
+  if (offset) result.offset = offset.value as number;
+
+  var transform = repeaterProp.property("ADBE Vector Repeater Transform") as PropertyGroup;
+  if (transform) {
+    var transformResult: { [key: string]: any } = {};
+
+    var anchor = transform.property("ADBE Vector Repeater Anchor") as Property;
+    if (anchor) {
+      var anchorValue = anchor.value as number[];
+      transformResult.anchorPoint = [Math.round(anchorValue[0]), Math.round(anchorValue[1])];
+    }
+
+    var position = transform.property("ADBE Vector Repeater Position") as Property;
+    if (position) {
+      var positionValue = position.value as number[];
+      transformResult.position = [Math.round(positionValue[0]), Math.round(positionValue[1])];
+    }
+
+    var scale = transform.property("ADBE Vector Repeater Scale") as Property;
+    if (scale) {
+      var scaleValue = scale.value as number[];
+      transformResult.scale = [Math.round(scaleValue[0]), Math.round(scaleValue[1])];
+    }
+
+    var rotation = transform.property("ADBE Vector Repeater Rotation") as Property;
+    if (rotation) transformResult.rotation = rotation.value as number;
+
+    var startOpacity = transform.property("ADBE Vector Repeater Start Opacity") as Property;
+    if (startOpacity) transformResult.startOpacity = startOpacity.value as number;
+
+    var endOpacity = transform.property("ADBE Vector Repeater End Opacity") as Property;
+    if (endOpacity) transformResult.endOpacity = endOpacity.value as number;
+
+    if (Object.keys(transformResult).length > 0) {
+      result.transform = transformResult;
+    }
+  }
+
+  return result;
+}
+
+function readOffsetPaths(offsetProp: PropertyGroup): object {
+  var result: { [key: string]: any } = { type: "offsetPaths" };
+
+  var amount = offsetProp.property("ADBE Vector Offset Amount") as Property;
+  if (amount) result.amount = amount.value as number;
+
+  var lineJoin = offsetProp.property("ADBE Vector Offset Line Join") as Property;
+  if (lineJoin) {
+    var lineJoinValue = lineJoin.value as number;
+    result.lineJoin = lineJoinValue === 2 ? "round" : lineJoinValue === 3 ? "bevel" : "miter";
+  }
+
+  var miterLimit = offsetProp.property("ADBE Vector Offset Miter Limit") as Property;
+  if (miterLimit) result.miterLimit = miterLimit.value as number;
+
+  return result;
+}
+
+function readPuckerBloat(pbProp: PropertyGroup): object {
+  var result: { [key: string]: any } = { type: "puckerBloat" };
+  var amount = pbProp.property("ADBE Vector PuckerBloat Amount") as Property;
+  if (amount) result.amount = amount.value as number;
+  return result;
+}
+
+function readRoundCorners(rcProp: PropertyGroup): object {
+  var result: { [key: string]: any } = { type: "roundCorners" };
+  var radius = rcProp.property("ADBE Vector RoundCorner Radius") as Property;
+  if (radius) result.radius = radius.value as number;
+  return result;
+}
+
+function readMergePaths(mergeProp: PropertyGroup): object {
+  var result: { [key: string]: any } = { type: "mergePaths" };
+  var mergeType = mergeProp.property("ADBE Vector Merge Type") as Property;
+  if (mergeType) {
+    var mergeTypeValue = mergeType.value as number;
+    result.mode =
+      mergeTypeValue === 2
+        ? "add"
+        : mergeTypeValue === 3
+          ? "subtract"
+          : mergeTypeValue === 4
+            ? "intersect"
+            : mergeTypeValue === 5
+              ? "excludeIntersections"
+              : "merge";
+  }
+  return result;
+}
+
+function readTwist(twistProp: PropertyGroup): object {
+  var result: { [key: string]: any } = { type: "twist" };
+  var angle = twistProp.property("ADBE Vector Twist Angle") as Property;
+  if (angle) result.angle = angle.value as number;
+
+  var center = twistProp.property("ADBE Vector Twist Center") as Property;
+  if (center) {
+    var centerValue = center.value as number[];
+    result.center = [Math.round(centerValue[0]), Math.round(centerValue[1])];
+  }
+  return result;
+}
+
+function readWigglePaths(roughenProp: PropertyGroup): object {
+  var result: { [key: string]: any } = { type: "wigglePaths" };
+
+  var size = roughenProp.property("ADBE Vector Roughen Size") as Property;
+  if (size) result.size = size.value as number;
+
+  var detail = roughenProp.property("ADBE Vector Roughen Detail") as Property;
+  if (detail) result.detail = detail.value as number;
+
+  var points = roughenProp.property("ADBE Vector Roughen Points") as Property;
+  if (points) result.points = (points.value as number) === 2 ? "smooth" : "corner";
+
+  var wigglesPerSecond = roughenProp.property("ADBE Vector Roughen Wiggles Per Second") as Property;
+  if (wigglesPerSecond) result.wigglesPerSecond = wigglesPerSecond.value as number;
+
+  var correlation = roughenProp.property("ADBE Vector Roughen Correlation") as Property;
+  if (correlation) result.correlation = correlation.value as number;
+
+  var temporalPhase = roughenProp.property("ADBE Vector Roughen Temporal Phase") as Property;
+  if (temporalPhase) result.temporalPhase = temporalPhase.value as number;
+
+  var spatialPhase = roughenProp.property("ADBE Vector Roughen Spatial Phase") as Property;
+  if (spatialPhase) result.spatialPhase = spatialPhase.value as number;
+
+  var randomSeed = roughenProp.property("ADBE Vector Roughen Random Seed") as Property;
+  if (randomSeed) result.randomSeed = randomSeed.value as number;
+
+  return result;
+}
+
+function readShapeOperator(prop: PropertyGroup): object | null {
+  var matchName = prop.matchName;
+  if (matchName === "ADBE Vector Filter - Trim") return readTrimPaths(prop);
+  if (matchName === "ADBE Vector Filter - Zigzag") return readZigZag(prop);
+  if (matchName === "ADBE Vector Filter - Repeater") return readRepeater(prop);
+  if (matchName === "ADBE Vector Filter - Offset") return readOffsetPaths(prop);
+  if (matchName === "ADBE Vector Filter - PB") return readPuckerBloat(prop);
+  if (matchName === "ADBE Vector Filter - RC") return readRoundCorners(prop);
+  if (matchName === "ADBE Vector Filter - Merge") return readMergePaths(prop);
+  if (matchName === "ADBE Vector Filter - Twist") return readTwist(prop);
+  if (matchName === "ADBE Vector Filter - Roughen") return readWigglePaths(prop);
+  return null;
+}
+
+/**
+ * Read custom path shape properties.
+ */
+function readPath(pathProp: PropertyGroup): object | null {
+  var shapeProp = pathProp.property("ADBE Vector Shape") as Property;
+  if (!shapeProp) return null;
+
+  var shapeVal = shapeProp.value as Shape;
+  if (!shapeVal || !shapeVal.vertices) return null;
+
+  var result: { [key: string]: any } = { type: "path" };
+
+  var vertices: number[][] = [];
+  for (var i = 0; i < shapeVal.vertices.length; i++) {
+    var v = shapeVal.vertices[i] as number[];
+    vertices.push([v[0], v[1]]);
+  }
+  result.vertices = vertices;
+
+  if (shapeVal.inTangents && shapeVal.inTangents.length > 0) {
+    var hasNonZeroInTangents = false;
+    var inTangents: number[][] = [];
+    for (var i = 0; i < shapeVal.inTangents.length; i++) {
+      var inTangent = shapeVal.inTangents[i] as number[];
+      if (inTangent[0] !== 0 || inTangent[1] !== 0) {
+        hasNonZeroInTangents = true;
+      }
+      inTangents.push([inTangent[0], inTangent[1]]);
+    }
+    if (hasNonZeroInTangents) {
+      result.inTangents = inTangents;
+    }
+  }
+
+  if (shapeVal.outTangents && shapeVal.outTangents.length > 0) {
+    var hasNonZeroOutTangents = false;
+    var outTangents: number[][] = [];
+    for (var i = 0; i < shapeVal.outTangents.length; i++) {
+      var outTangent = shapeVal.outTangents[i] as number[];
+      if (outTangent[0] !== 0 || outTangent[1] !== 0) {
+        hasNonZeroOutTangents = true;
+      }
+      outTangents.push([outTangent[0], outTangent[1]]);
+    }
+    if (hasNonZeroOutTangents) {
+      result.outTangents = outTangents;
+    }
+  }
+
+  if (shapeVal.closed === false) {
+    result.closed = false;
+  }
+
+  return result;
+}
+
 /**
  * Read a single shape group and return its shape definition.
  */
@@ -196,6 +443,7 @@ function readShapeGroup(group: PropertyGroup): object | null {
   var shapeResult: { [key: string]: any } | null = null;
   var fill: object | null = null;
   var stroke: object | null = null;
+  var operators: object[] = [];
 
   // Iterate through group contents to find shape, fill, stroke
   for (var i = 1; i <= contents.numProperties; i++) {
@@ -210,12 +458,19 @@ function readShapeGroup(group: PropertyGroup): object | null {
       shapeResult = readEllipse(prop);
     } else if (matchName === "ADBE Vector Shape - Star") {
       shapeResult = readPolystar(prop);
+    } else if (matchName === "ADBE Vector Shape - Group") {
+      shapeResult = readPath(prop);
     } else if (matchName === "ADBE Vector Graphic - Fill") {
       fill = readFill(prop);
     } else if (matchName === "ADBE Vector Graphic - Stroke") {
       stroke = readStroke(prop);
+    } else if (matchName.indexOf("ADBE Vector Filter -") === 0) {
+      var operator = readShapeOperator(prop);
+      if (operator) {
+        operators.push(operator);
+      }
     }
-    // Skip paths (ADBE Vector Shape - Group) and other unsupported shapes
+    // Skip unsupported shape types
   }
 
   if (!shapeResult) return null;
@@ -232,6 +487,23 @@ function readShapeGroup(group: PropertyGroup): object | null {
   }
   if (stroke) {
     shapeResult.stroke = stroke;
+  }
+  if (operators.length > 0) {
+    shapeResult.operators = operators;
+  }
+
+  // Custom paths use group transform for position.
+  if (shapeResult.type === "path") {
+    var groupTransform = group.property("ADBE Vector Transform Group") as PropertyGroup;
+    if (groupTransform) {
+      var groupPos = groupTransform.property("ADBE Vector Position") as Property;
+      if (groupPos) {
+        var pos = groupPos.value as number[];
+        if (pos[0] !== 0 || pos[1] !== 0) {
+          shapeResult.position = [Math.round(pos[0]), Math.round(pos[1])];
+        }
+      }
+    }
   }
 
   return shapeResult;

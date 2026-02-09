@@ -308,6 +308,9 @@ Each layer must have exactly one of `type`, `file`, or `composition`.
 
 Shape layers support parametric shapes (rectangle, ellipse, polygon, star) and custom paths with fill and stroke. Each shape layer requires a `shapes` array with at least one shape.
 
+> [!NOTE]
+> Shape-group gradient fills (`fill.gradient`) are not part of the schema. For gradient looks, use layer styles/effects on the layer.
+
 **Shape types and properties:**
 
 | Shape Type | Required Properties | Optional Properties |
@@ -327,6 +330,20 @@ Shape layers support parametric shapes (rectangle, ellipse, polygon, star) and c
 | `stroke.color` | string | 6-char hex color (required for stroke) |
 | `stroke.width` | number | Stroke width (default: 1) |
 | `stroke.opacity` | number | Opacity 0-100 (default: 100) |
+
+**Shape operators (`operators` on each shape):**
+
+| Operator type | Supported properties |
+|---|---|
+| `trimPaths` | `start`, `end`, `offset`, `trimMultipleShapes` |
+| `zigZag` | `size`, `ridgesPerSegment`, `points` |
+| `repeater` | `copies`, `offset`, `transform.anchorPoint`, `transform.position`, `transform.scale`, `transform.rotation`, `transform.startOpacity`, `transform.endOpacity` |
+| `offsetPaths` | `amount`, `lineJoin`, `miterLimit` |
+| `puckerBloat` | `amount` |
+| `roundCorners` | `radius` |
+| `mergePaths` | `mode` |
+| `twist` | `angle`, `center` |
+| `wigglePaths` | `size`, `detail`, `points`, `wigglesPerSecond`, `correlation`, `temporalPhase`, `spatialPhase`, `randomSeed` |
 
 **Example:**
 

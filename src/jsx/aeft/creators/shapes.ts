@@ -19,11 +19,94 @@ interface ShapeStrokeDef {
   opacity?: number | KeyframeDef[];
 }
 
+interface TrimPathsOperatorDef {
+  type: "trimPaths";
+  start?: number | KeyframeDef[];
+  end?: number | KeyframeDef[];
+  offset?: number | KeyframeDef[];
+  trimMultipleShapes?: "simultaneously" | "individually";
+}
+
+interface ZigZagOperatorDef {
+  type: "zigZag";
+  size?: number | KeyframeDef[];
+  ridgesPerSegment?: number | KeyframeDef[];
+  points?: "corner" | "smooth";
+}
+
+interface RepeaterTransformDef {
+  anchorPoint?: [number, number] | KeyframeDef[];
+  position?: [number, number] | KeyframeDef[];
+  scale?: [number, number] | KeyframeDef[];
+  rotation?: number | KeyframeDef[];
+  startOpacity?: number | KeyframeDef[];
+  endOpacity?: number | KeyframeDef[];
+}
+
+interface RepeaterOperatorDef {
+  type: "repeater";
+  copies?: number | KeyframeDef[];
+  offset?: number | KeyframeDef[];
+  transform?: RepeaterTransformDef;
+}
+
+interface OffsetPathsOperatorDef {
+  type: "offsetPaths";
+  amount?: number | KeyframeDef[];
+  lineJoin?: "miter" | "round" | "bevel";
+  miterLimit?: number | KeyframeDef[];
+}
+
+interface PuckerBloatOperatorDef {
+  type: "puckerBloat";
+  amount?: number | KeyframeDef[];
+}
+
+interface RoundCornersOperatorDef {
+  type: "roundCorners";
+  radius?: number | KeyframeDef[];
+}
+
+interface MergePathsOperatorDef {
+  type: "mergePaths";
+  mode?: "merge" | "add" | "subtract" | "intersect" | "excludeIntersections";
+}
+
+interface TwistOperatorDef {
+  type: "twist";
+  angle?: number | KeyframeDef[];
+  center?: [number, number] | KeyframeDef[];
+}
+
+interface WigglePathsOperatorDef {
+  type: "wigglePaths";
+  size?: number | KeyframeDef[];
+  detail?: number | KeyframeDef[];
+  points?: "corner" | "smooth";
+  wigglesPerSecond?: number | KeyframeDef[];
+  correlation?: number | KeyframeDef[];
+  temporalPhase?: number | KeyframeDef[];
+  spatialPhase?: number | KeyframeDef[];
+  randomSeed?: number | KeyframeDef[];
+}
+
+type ShapeOperatorDef =
+  | TrimPathsOperatorDef
+  | ZigZagOperatorDef
+  | RepeaterOperatorDef
+  | OffsetPathsOperatorDef
+  | PuckerBloatOperatorDef
+  | RoundCornersOperatorDef
+  | MergePathsOperatorDef
+  | TwistOperatorDef
+  | WigglePathsOperatorDef;
+
 interface BaseShapeDef {
   name?: string;
   position?: [number, number] | KeyframeDef[];
   fill?: ShapeFillDef;
   stroke?: ShapeStrokeDef;
+  operators?: ShapeOperatorDef[];
 }
 
 interface RectangleShapeDef extends BaseShapeDef {
@@ -226,6 +309,235 @@ function addStroke(groupContents: PropertyGroup, strokeDef: ShapeStrokeDef): voi
   }
 }
 
+function setShapeProp(prop: Property, value: number | [number, number] | KeyframeDef[]): void {
+  if (isKeyframeArray(value)) {
+    applyKeyframes(prop, value);
+  } else {
+    //@ts-ignore
+    prop.setValue(value);
+  }
+}
+
+function applyRepeaterTransform(repeater: PropertyGroup, transformDef: RepeaterTransformDef): void {
+  var transform = repeater.property("ADBE Vector Repeater Transform") as PropertyGroup;
+  if (!transform) return;
+
+  if (transformDef.anchorPoint !== undefined) {
+    var anchor = transform.property("ADBE Vector Repeater Anchor") as Property;
+    if (anchor) setShapeProp(anchor, transformDef.anchorPoint);
+  }
+  if (transformDef.position !== undefined) {
+    var position = transform.property("ADBE Vector Repeater Position") as Property;
+    if (position) setShapeProp(position, transformDef.position);
+  }
+  if (transformDef.scale !== undefined) {
+    var scale = transform.property("ADBE Vector Repeater Scale") as Property;
+    if (scale) setShapeProp(scale, transformDef.scale);
+  }
+  if (transformDef.rotation !== undefined) {
+    var rotation = transform.property("ADBE Vector Repeater Rotation") as Property;
+    if (rotation) setShapeProp(rotation, transformDef.rotation);
+  }
+  if (transformDef.startOpacity !== undefined) {
+    var startOpacity = transform.property("ADBE Vector Repeater Start Opacity") as Property;
+    if (startOpacity) setShapeProp(startOpacity, transformDef.startOpacity);
+  }
+  if (transformDef.endOpacity !== undefined) {
+    var endOpacity = transform.property("ADBE Vector Repeater End Opacity") as Property;
+    if (endOpacity) setShapeProp(endOpacity, transformDef.endOpacity);
+  }
+}
+
+function addShapeOperator(groupContents: PropertyGroup, operatorDef: ShapeOperatorDef): void {
+  if (operatorDef.type === "trimPaths") {
+    var trim = groupContents.addProperty("ADBE Vector Filter - Trim") as PropertyGroup;
+    if (!trim) return;
+
+    if (operatorDef.start !== undefined) {
+      var start = trim.property("ADBE Vector Trim Start") as Property;
+      if (start) setShapeProp(start, operatorDef.start);
+    }
+    if (operatorDef.end !== undefined) {
+      var end = trim.property("ADBE Vector Trim End") as Property;
+      if (end) setShapeProp(end, operatorDef.end);
+    }
+    if (operatorDef.offset !== undefined) {
+      var offset = trim.property("ADBE Vector Trim Offset") as Property;
+      if (offset) setShapeProp(offset, operatorDef.offset);
+    }
+    if (operatorDef.trimMultipleShapes) {
+      var trimType = trim.property("ADBE Vector Trim Type") as Property;
+      if (trimType) {
+        //@ts-ignore
+        trimType.setValue(operatorDef.trimMultipleShapes === "individually" ? 2 : 1);
+      }
+    }
+    return;
+  }
+
+  if (operatorDef.type === "zigZag") {
+    var zigZag = groupContents.addProperty("ADBE Vector Filter - Zigzag") as PropertyGroup;
+    if (!zigZag) return;
+
+    if (operatorDef.size !== undefined) {
+      var size = zigZag.property("ADBE Vector Zigzag Size") as Property;
+      if (size) setShapeProp(size, operatorDef.size);
+    }
+    if (operatorDef.ridgesPerSegment !== undefined) {
+      var ridges = zigZag.property("ADBE Vector Zigzag Detail") as Property;
+      if (ridges) setShapeProp(ridges, operatorDef.ridgesPerSegment);
+    }
+    if (operatorDef.points) {
+      var points = zigZag.property("ADBE Vector Zigzag Points") as Property;
+      if (points) {
+        //@ts-ignore
+        points.setValue(operatorDef.points === "smooth" ? 2 : 1);
+      }
+    }
+    return;
+  }
+
+  if (operatorDef.type === "repeater") {
+    var repeater = groupContents.addProperty("ADBE Vector Filter - Repeater") as PropertyGroup;
+    if (!repeater) return;
+
+    if (operatorDef.copies !== undefined) {
+      var copies = repeater.property("ADBE Vector Repeater Copies") as Property;
+      if (copies) setShapeProp(copies, operatorDef.copies);
+    }
+    if (operatorDef.offset !== undefined) {
+      var offset = repeater.property("ADBE Vector Repeater Offset") as Property;
+      if (offset) setShapeProp(offset, operatorDef.offset);
+    }
+    if (operatorDef.transform) {
+      applyRepeaterTransform(repeater, operatorDef.transform);
+    }
+    return;
+  }
+
+  if (operatorDef.type === "offsetPaths") {
+    var offsetPaths = groupContents.addProperty("ADBE Vector Filter - Offset") as PropertyGroup;
+    if (!offsetPaths) return;
+
+    if (operatorDef.amount !== undefined) {
+      var amount = offsetPaths.property("ADBE Vector Offset Amount") as Property;
+      if (amount) setShapeProp(amount, operatorDef.amount);
+    }
+    if (operatorDef.lineJoin) {
+      var lineJoin = offsetPaths.property("ADBE Vector Offset Line Join") as Property;
+      if (lineJoin) {
+        var lineJoinMap: { [key: string]: number } = { miter: 1, round: 2, bevel: 3 };
+        //@ts-ignore
+        lineJoin.setValue(lineJoinMap[operatorDef.lineJoin] || 1);
+      }
+    }
+    if (operatorDef.miterLimit !== undefined) {
+      var miterLimit = offsetPaths.property("ADBE Vector Offset Miter Limit") as Property;
+      if (miterLimit) setShapeProp(miterLimit, operatorDef.miterLimit);
+    }
+    return;
+  }
+
+  if (operatorDef.type === "puckerBloat") {
+    var pb = groupContents.addProperty("ADBE Vector Filter - PB") as PropertyGroup;
+    if (!pb) return;
+
+    if (operatorDef.amount !== undefined) {
+      var amount = pb.property("ADBE Vector PuckerBloat Amount") as Property;
+      if (amount) setShapeProp(amount, operatorDef.amount);
+    }
+    return;
+  }
+
+  if (operatorDef.type === "roundCorners") {
+    var roundCorners = groupContents.addProperty("ADBE Vector Filter - RC") as PropertyGroup;
+    if (!roundCorners) return;
+
+    if (operatorDef.radius !== undefined) {
+      var radius = roundCorners.property("ADBE Vector RoundCorner Radius") as Property;
+      if (radius) setShapeProp(radius, operatorDef.radius);
+    }
+    return;
+  }
+
+  if (operatorDef.type === "mergePaths") {
+    var mergePaths = groupContents.addProperty("ADBE Vector Filter - Merge") as PropertyGroup;
+    if (!mergePaths) return;
+
+    if (operatorDef.mode) {
+      var mergeType = mergePaths.property("ADBE Vector Merge Type") as Property;
+      if (mergeType) {
+        var mergeModeMap: { [key: string]: number } = {
+          merge: 1,
+          add: 2,
+          subtract: 3,
+          intersect: 4,
+          excludeIntersections: 5,
+        };
+        //@ts-ignore
+        mergeType.setValue(mergeModeMap[operatorDef.mode] || 1);
+      }
+    }
+    return;
+  }
+
+  if (operatorDef.type === "twist") {
+    var twist = groupContents.addProperty("ADBE Vector Filter - Twist") as PropertyGroup;
+    if (!twist) return;
+
+    if (operatorDef.angle !== undefined) {
+      var angle = twist.property("ADBE Vector Twist Angle") as Property;
+      if (angle) setShapeProp(angle, operatorDef.angle);
+    }
+    if (operatorDef.center !== undefined) {
+      var center = twist.property("ADBE Vector Twist Center") as Property;
+      if (center) setShapeProp(center, operatorDef.center);
+    }
+    return;
+  }
+
+  if (operatorDef.type === "wigglePaths") {
+    var roughen = groupContents.addProperty("ADBE Vector Filter - Roughen") as PropertyGroup;
+    if (!roughen) return;
+
+    if (operatorDef.size !== undefined) {
+      var size = roughen.property("ADBE Vector Roughen Size") as Property;
+      if (size) setShapeProp(size, operatorDef.size);
+    }
+    if (operatorDef.detail !== undefined) {
+      var detail = roughen.property("ADBE Vector Roughen Detail") as Property;
+      if (detail) setShapeProp(detail, operatorDef.detail);
+    }
+    if (operatorDef.points) {
+      var points = roughen.property("ADBE Vector Roughen Points") as Property;
+      if (points) {
+        //@ts-ignore
+        points.setValue(operatorDef.points === "smooth" ? 2 : 1);
+      }
+    }
+    if (operatorDef.wigglesPerSecond !== undefined) {
+      var wigglesPerSecond = roughen.property("ADBE Vector Roughen Wiggles Per Second") as Property;
+      if (wigglesPerSecond) setShapeProp(wigglesPerSecond, operatorDef.wigglesPerSecond);
+    }
+    if (operatorDef.correlation !== undefined) {
+      var correlation = roughen.property("ADBE Vector Roughen Correlation") as Property;
+      if (correlation) setShapeProp(correlation, operatorDef.correlation);
+    }
+    if (operatorDef.temporalPhase !== undefined) {
+      var temporalPhase = roughen.property("ADBE Vector Roughen Temporal Phase") as Property;
+      if (temporalPhase) setShapeProp(temporalPhase, operatorDef.temporalPhase);
+    }
+    if (operatorDef.spatialPhase !== undefined) {
+      var spatialPhase = roughen.property("ADBE Vector Roughen Spatial Phase") as Property;
+      if (spatialPhase) setShapeProp(spatialPhase, operatorDef.spatialPhase);
+    }
+    if (operatorDef.randomSeed !== undefined) {
+      var randomSeed = roughen.property("ADBE Vector Roughen Random Seed") as Property;
+      if (randomSeed) setShapeProp(randomSeed, operatorDef.randomSeed);
+    }
+  }
+}
+
 /**
  * Add a rectangle shape to a group.
  */
@@ -268,13 +580,21 @@ function addEllipse(groupContents: PropertyGroup, shapeDef: EllipseShapeDef): vo
   var ellipse = groupContents.addProperty("ADBE Vector Shape - Ellipse") as PropertyGroup;
 
   var size = ellipse.property("ADBE Vector Ellipse Size") as Property;
-  //@ts-ignore
-  size.setValue(shapeDef.size);
+  if (isKeyframeArray(shapeDef.size)) {
+    applyKeyframes(size, shapeDef.size);
+  } else {
+    //@ts-ignore
+    size.setValue(shapeDef.size);
+  }
 
   if (shapeDef.position) {
     var pos = ellipse.property("ADBE Vector Ellipse Position") as Property;
-    //@ts-ignore
-    pos.setValue(shapeDef.position);
+    if (isKeyframeArray(shapeDef.position)) {
+      applyKeyframes(pos, shapeDef.position);
+    } else {
+      //@ts-ignore
+      pos.setValue(shapeDef.position);
+    }
   }
 }
 
@@ -290,29 +610,49 @@ function addPolygon(groupContents: PropertyGroup, shapeDef: PolygonShapeDef): vo
   type.setValue(2); // 1 = star, 2 = polygon
 
   var points = polystar.property("ADBE Vector Star Points") as Property;
-  //@ts-ignore
-  points.setValue(shapeDef.points);
+  if (isKeyframeArray(shapeDef.points)) {
+    applyKeyframes(points, shapeDef.points);
+  } else {
+    //@ts-ignore
+    points.setValue(shapeDef.points);
+  }
 
   var outerRadius = polystar.property("ADBE Vector Star Outer Radius") as Property;
-  //@ts-ignore
-  outerRadius.setValue(shapeDef.outerRadius);
+  if (isKeyframeArray(shapeDef.outerRadius)) {
+    applyKeyframes(outerRadius, shapeDef.outerRadius);
+  } else {
+    //@ts-ignore
+    outerRadius.setValue(shapeDef.outerRadius);
+  }
 
   if (shapeDef.position) {
     var pos = polystar.property("ADBE Vector Star Position") as Property;
-    //@ts-ignore
-    pos.setValue(shapeDef.position);
+    if (isKeyframeArray(shapeDef.position)) {
+      applyKeyframes(pos, shapeDef.position);
+    } else {
+      //@ts-ignore
+      pos.setValue(shapeDef.position);
+    }
   }
 
   if (shapeDef.outerRoundness !== undefined) {
     var outerRound = polystar.property("ADBE Vector Star Outer Roundess") as Property;
-    //@ts-ignore
-    outerRound.setValue(shapeDef.outerRoundness);
+    if (isKeyframeArray(shapeDef.outerRoundness)) {
+      applyKeyframes(outerRound, shapeDef.outerRoundness);
+    } else {
+      //@ts-ignore
+      outerRound.setValue(shapeDef.outerRoundness);
+    }
   }
 
   if (shapeDef.rotation !== undefined) {
     var rotation = polystar.property("ADBE Vector Star Rotation") as Property;
-    //@ts-ignore
-    rotation.setValue(shapeDef.rotation);
+    if (isKeyframeArray(shapeDef.rotation)) {
+      applyKeyframes(rotation, shapeDef.rotation);
+    } else {
+      //@ts-ignore
+      rotation.setValue(shapeDef.rotation);
+    }
   }
 }
 
@@ -328,39 +668,67 @@ function addStar(groupContents: PropertyGroup, shapeDef: StarShapeDef): void {
   type.setValue(1); // 1 = star, 2 = polygon
 
   var points = polystar.property("ADBE Vector Star Points") as Property;
-  //@ts-ignore
-  points.setValue(shapeDef.points);
+  if (isKeyframeArray(shapeDef.points)) {
+    applyKeyframes(points, shapeDef.points);
+  } else {
+    //@ts-ignore
+    points.setValue(shapeDef.points);
+  }
 
   var outerRadius = polystar.property("ADBE Vector Star Outer Radius") as Property;
-  //@ts-ignore
-  outerRadius.setValue(shapeDef.outerRadius);
+  if (isKeyframeArray(shapeDef.outerRadius)) {
+    applyKeyframes(outerRadius, shapeDef.outerRadius);
+  } else {
+    //@ts-ignore
+    outerRadius.setValue(shapeDef.outerRadius);
+  }
 
   var innerRadius = polystar.property("ADBE Vector Star Inner Radius") as Property;
-  //@ts-ignore
-  innerRadius.setValue(shapeDef.innerRadius);
+  if (isKeyframeArray(shapeDef.innerRadius)) {
+    applyKeyframes(innerRadius, shapeDef.innerRadius);
+  } else {
+    //@ts-ignore
+    innerRadius.setValue(shapeDef.innerRadius);
+  }
 
   if (shapeDef.position) {
     var pos = polystar.property("ADBE Vector Star Position") as Property;
-    //@ts-ignore
-    pos.setValue(shapeDef.position);
+    if (isKeyframeArray(shapeDef.position)) {
+      applyKeyframes(pos, shapeDef.position);
+    } else {
+      //@ts-ignore
+      pos.setValue(shapeDef.position);
+    }
   }
 
   if (shapeDef.outerRoundness !== undefined) {
     var outerRound = polystar.property("ADBE Vector Star Outer Roundess") as Property;
-    //@ts-ignore
-    outerRound.setValue(shapeDef.outerRoundness);
+    if (isKeyframeArray(shapeDef.outerRoundness)) {
+      applyKeyframes(outerRound, shapeDef.outerRoundness);
+    } else {
+      //@ts-ignore
+      outerRound.setValue(shapeDef.outerRoundness);
+    }
   }
 
   if (shapeDef.innerRoundness !== undefined) {
     var innerRound = polystar.property("ADBE Vector Star Inner Roundess") as Property;
-    //@ts-ignore
-    innerRound.setValue(shapeDef.innerRoundness);
+    if (isKeyframeArray(shapeDef.innerRoundness)) {
+      applyKeyframes(innerRound, shapeDef.innerRoundness);
+    } else {
+      //@ts-ignore
+      innerRound.setValue(shapeDef.innerRoundness);
+    }
   }
 
   if (shapeDef.rotation !== undefined) {
     var rotation = polystar.property("ADBE Vector Star Rotation") as Property;
-    //@ts-ignore
-    rotation.setValue(shapeDef.rotation);
+    if (isKeyframeArray(shapeDef.rotation)) {
+      applyKeyframes(rotation, shapeDef.rotation);
+    } else {
+      //@ts-ignore
+      rotation.setValue(shapeDef.rotation);
+    }
   }
 }
 
@@ -444,6 +812,12 @@ export function applyShapes(layer: ShapeLayer, shapes: ShapeDef[]): void {
       } else {
         //@ts-ignore
         groupPos.setValue(shapeDef.position);
+      }
+    }
+
+    if (shapeDef.operators && shapeDef.operators.length > 0) {
+      for (var opIndex = 0; opIndex < shapeDef.operators.length; opIndex++) {
+        addShapeOperator(groupContents, shapeDef.operators[opIndex]);
       }
     }
 

@@ -159,7 +159,7 @@ export const ShapeFillSchema = z.object({
     z.number().min(0).max(100),
     z.array(OpacityKeyframeSchema).min(2),
   ]).optional(),
-});
+}).strict();
 
 export type ShapeFill = z.infer<typeof ShapeFillSchema>;
 
@@ -176,9 +176,107 @@ export const ShapeStrokeSchema = z.object({
     z.number().min(0).max(100),
     z.array(OpacityKeyframeSchema).min(2),
   ]).optional(),
-});
+}).strict();
 
 export type ShapeStroke = z.infer<typeof ShapeStrokeSchema>;
+
+const ShapeScalarSchema = z.union([
+  z.number(),
+  z.array(ScalarKeyframeSchema).min(2),
+]);
+
+const ShapeTupleSchema = z.union([
+  z.tuple([z.number(), z.number()]),
+  z.array(TupleKeyframeSchema).min(2),
+]);
+
+const ShapeOpacitySchema = z.union([
+  z.number().min(0).max(100),
+  z.array(OpacityKeyframeSchema).min(2),
+]);
+
+export const TrimPathsOperatorSchema = z.object({
+  type: z.literal("trimPaths"),
+  start: ShapeOpacitySchema.optional(),
+  end: ShapeOpacitySchema.optional(),
+  offset: ShapeScalarSchema.optional(),
+  trimMultipleShapes: z.enum(["simultaneously", "individually"]).optional(),
+}).strict();
+
+export const ZigZagOperatorSchema = z.object({
+  type: z.literal("zigZag"),
+  size: ShapeScalarSchema.optional(),
+  ridgesPerSegment: ShapeScalarSchema.optional(),
+  points: z.enum(["corner", "smooth"]).optional(),
+}).strict();
+
+export const RepeaterOperatorSchema = z.object({
+  type: z.literal("repeater"),
+  copies: ShapeScalarSchema.optional(),
+  offset: ShapeScalarSchema.optional(),
+  transform: z.object({
+    anchorPoint: ShapeTupleSchema.optional(),
+    position: ShapeTupleSchema.optional(),
+    scale: ShapeTupleSchema.optional(),
+    rotation: ShapeScalarSchema.optional(),
+    startOpacity: ShapeOpacitySchema.optional(),
+    endOpacity: ShapeOpacitySchema.optional(),
+  }).strict().optional(),
+}).strict();
+
+export const OffsetPathsOperatorSchema = z.object({
+  type: z.literal("offsetPaths"),
+  amount: ShapeScalarSchema.optional(),
+  lineJoin: z.enum(["miter", "round", "bevel"]).optional(),
+  miterLimit: ShapeScalarSchema.optional(),
+}).strict();
+
+export const PuckerBloatOperatorSchema = z.object({
+  type: z.literal("puckerBloat"),
+  amount: ShapeScalarSchema.optional(),
+}).strict();
+
+export const RoundCornersOperatorSchema = z.object({
+  type: z.literal("roundCorners"),
+  radius: ShapeScalarSchema.optional(),
+}).strict();
+
+export const MergePathsOperatorSchema = z.object({
+  type: z.literal("mergePaths"),
+  mode: z.enum(["merge", "add", "subtract", "intersect", "excludeIntersections"]).optional(),
+}).strict();
+
+export const TwistOperatorSchema = z.object({
+  type: z.literal("twist"),
+  angle: ShapeScalarSchema.optional(),
+  center: ShapeTupleSchema.optional(),
+}).strict();
+
+export const WigglePathsOperatorSchema = z.object({
+  type: z.literal("wigglePaths"),
+  size: ShapeScalarSchema.optional(),
+  detail: ShapeScalarSchema.optional(),
+  points: z.enum(["corner", "smooth"]).optional(),
+  wigglesPerSecond: ShapeScalarSchema.optional(),
+  correlation: ShapeOpacitySchema.optional(),
+  temporalPhase: ShapeScalarSchema.optional(),
+  spatialPhase: ShapeScalarSchema.optional(),
+  randomSeed: ShapeScalarSchema.optional(),
+}).strict();
+
+export const ShapeOperatorSchema = z.discriminatedUnion("type", [
+  TrimPathsOperatorSchema,
+  ZigZagOperatorSchema,
+  RepeaterOperatorSchema,
+  OffsetPathsOperatorSchema,
+  PuckerBloatOperatorSchema,
+  RoundCornersOperatorSchema,
+  MergePathsOperatorSchema,
+  TwistOperatorSchema,
+  WigglePathsOperatorSchema,
+]);
+
+export type ShapeOperator = z.infer<typeof ShapeOperatorSchema>;
 
 const BaseShapeSchema = z.object({
   name: z.string().optional(),
@@ -188,7 +286,8 @@ const BaseShapeSchema = z.object({
   ]).optional(),
   fill: ShapeFillSchema.optional(),
   stroke: ShapeStrokeSchema.optional(),
-});
+  operators: z.array(ShapeOperatorSchema).optional(),
+}).strict();
 
 export const RectangleShapeSchema = BaseShapeSchema.extend({
   type: z.literal("rectangle"),

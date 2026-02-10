@@ -97,7 +97,7 @@ export const createFromDocument = (doc: {
  */
 export const generateFromComp = (
   selectionOnly: boolean
-): { files: object[]; compositions: object[] } => {
+): { files?: object[]; compositions: object[] } => {
   var comp = getActiveComp();
   if (!comp) {
     throw new Error("No active composition");
@@ -106,8 +106,13 @@ export const generateFromComp = (
   var files = collectFiles(comp);
   var compData = readComp(comp, selectionOnly);
 
-  return {
-    files: files,
+  var result: { files?: object[]; compositions: object[] } = {
     compositions: [compData],
   };
+
+  if (files.length > 0) {
+    result.files = files;
+  }
+
+  return result;
 };

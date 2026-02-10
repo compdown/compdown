@@ -3,6 +3,7 @@ import yaml from "js-yaml";
 import { subscribeBackgroundColor, selectFile } from "../lib/utils/bolt";
 import { validateYaml, type ValidationError } from "./schema/validation";
 import { createInAE, generateFromAE } from "./lib/bridge";
+import { cleanupGeneratedDocument } from "./lib/generatedDocCleanup";
 import { YamlEditor } from "./components/YamlEditor";
 import { Toolbar } from "./components/Toolbar";
 import { ErrorPanel } from "./components/ErrorPanel";
@@ -67,7 +68,8 @@ export const App = () => {
     setIsGenerating(true);
     setRuntimeError(null);
     try {
-      const doc = await generateFromAE(selectionOnly);
+      const rawDoc = await generateFromAE(selectionOnly);
+      const doc = cleanupGeneratedDocument(rawDoc);
       const yamlStr = yaml.dump(doc, {
         indent: 2,
         lineWidth: -1,

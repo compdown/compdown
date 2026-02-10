@@ -750,12 +750,19 @@ function addPath(groupContents: PropertyGroup, shapeDef: PathShapeDef): void {
     throw new Error("outTangents must match vertices length for path shape");
   }
 
+  var defaultInTangents: [number, number][] = [];
+  var defaultOutTangents: [number, number][] = [];
+  for (var i = 0; i < vertices.length; i++) {
+    defaultInTangents.push([0, 0]);
+    defaultOutTangents.push([0, 0]);
+  }
+
   var shape = new Shape();
   shape.vertices = vertices as any;
   shape.inTangents =
-    (inTangents.length > 0 ? inTangents : vertices.map(() => [0, 0])) as any;
+    (inTangents.length > 0 ? inTangents : defaultInTangents) as any;
   shape.outTangents =
-    (outTangents.length > 0 ? outTangents : vertices.map(() => [0, 0])) as any;
+    (outTangents.length > 0 ? outTangents : defaultOutTangents) as any;
   shape.closed = shapeDef.closed !== false;
 
   //@ts-ignore

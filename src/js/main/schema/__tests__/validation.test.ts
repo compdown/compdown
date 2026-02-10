@@ -353,6 +353,54 @@ compositions:
     expect(result.data!.compositions![0].layers![0].color).toBe("000000");
   });
 
+  it("converts hex color strings in effect properties to RGB arrays", () => {
+    const yaml = `
+compositions:
+  - name: Test
+    layers:
+      - name: Gradient Layer
+        type: solid
+        color: 000000
+        effects:
+          - name: Gradient Ramp
+            matchName: ADBE Ramp
+            properties:
+              Start Color: 2979FF
+              End Color: "#06B6D4"
+              Start of Ramp: [110, 70]
+              End of Ramp: [610, 180]
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+
+    const props = result.data!.compositions![0].layers![0].effects![0].properties!;
+    expect(props["Start Color"]).toEqual([0.161, 0.475, 1]);
+    expect(props["End Color"]).toEqual([0.024, 0.714, 0.831]);
+    expect(props["Start of Ramp"]).toEqual([110, 70]);
+  });
+
+  it("converts hex color strings in layer style properties to RGB arrays", () => {
+    const yaml = `
+compositions:
+  - name: Test
+    layers:
+      - name: Styled
+        type: solid
+        color: 000000
+        layerStyles:
+          - type: stroke
+            properties:
+              Color: FF8800
+              Size: 2
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+
+    const props = result.data!.compositions![0].layers![0].layerStyles![0].properties!;
+    expect(props["Color"]).toEqual([1, 0.533, 0]);
+    expect(props["Size"]).toBe(2);
+  });
+
   // ---------------------------------------------------------------------------
   // Composition-in-composition
   // ---------------------------------------------------------------------------

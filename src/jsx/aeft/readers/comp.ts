@@ -17,12 +17,14 @@ export function readComp(comp: CompItem, selectionOnly: boolean): object {
 
   var compData: { [key: string]: any } = {
     name: comp.name,
-    width: comp.width,
-    height: comp.height,
-    duration: comp.duration,
-    framerate: comp.frameRate,
-    pixelAspect: comp.pixelAspect,
   };
+
+  // Only include non-default comp settings (matching schema defaults)
+  if (comp.width !== 1920) compData.width = comp.width;
+  if (comp.height !== 1080) compData.height = comp.height;
+  if (Math.abs(comp.duration - 10) > 0.001) compData.duration = comp.duration;
+  if (Math.abs(comp.frameRate - 30) > 0.001) compData.framerate = comp.frameRate;
+  if (Math.abs(comp.pixelAspect - 1) > 0.001) compData.pixelAspect = comp.pixelAspect;
 
   // Only include non-default color
   if (colorHex !== "000000") {

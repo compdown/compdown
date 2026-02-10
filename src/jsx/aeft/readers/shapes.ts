@@ -12,6 +12,11 @@ function rgbToHex(r: number, g: number, b: number): string {
   );
 }
 
+function roundCoord(value: number): number {
+  var rounded = Math.round(value * 1000) / 1000;
+  return rounded === 0 ? 0 : rounded;
+}
+
 /**
  * Read fill properties from a fill property group.
  */
@@ -392,7 +397,7 @@ function readPath(pathProp: PropertyGroup): object | null {
   var vertices: number[][] = [];
   for (var i = 0; i < shapeVal.vertices.length; i++) {
     var v = shapeVal.vertices[i] as number[];
-    vertices.push([v[0], v[1]]);
+    vertices.push([roundCoord(v[0]), roundCoord(v[1])]);
   }
   result.vertices = vertices;
 
@@ -404,7 +409,7 @@ function readPath(pathProp: PropertyGroup): object | null {
       if (inTangent[0] !== 0 || inTangent[1] !== 0) {
         hasNonZeroInTangents = true;
       }
-      inTangents.push([inTangent[0], inTangent[1]]);
+      inTangents.push([roundCoord(inTangent[0]), roundCoord(inTangent[1])]);
     }
     if (hasNonZeroInTangents) {
       result.inTangents = inTangents;
@@ -419,7 +424,7 @@ function readPath(pathProp: PropertyGroup): object | null {
       if (outTangent[0] !== 0 || outTangent[1] !== 0) {
         hasNonZeroOutTangents = true;
       }
-      outTangents.push([outTangent[0], outTangent[1]]);
+      outTangents.push([roundCoord(outTangent[0]), roundCoord(outTangent[1])]);
     }
     if (hasNonZeroOutTangents) {
       result.outTangents = outTangents;
@@ -431,6 +436,60 @@ function readPath(pathProp: PropertyGroup): object | null {
   }
 
   return result;
+}
+
+/**
+ * Convert simple open 2-point stroked paths into rectangle shapes.
+ * This avoids noisy vertex exports for common lower-third bars.
+ */
+function normalizeSimplePathShape(shape: { [key: string]: any }): { [key: string]: any } {
+  if (shape.type !== "path") return shape;
+  if (shape.closed !== false) return shape;
+  if (!(shape.vertices instanceof Array) || shape.vertices.length !== 2) return shape;
+  if (shape.inTangents || shape.outTangents) return shape;
+  if (!shape.stroke || typeof shape.stroke !== "object") return shape;
+  if (typeof shape.stroke.width !== "number" || shape.stroke.width <= 0) return shape;
+
+  var v1 = shape.vertices[0];
+  var v2 = shape.vertices[1];
+  if (!(v1 instanceof Array) || !(v2 instanceof Array)) return shape;
+  if (v1.length < 2 || v2.length < 2) return shape;
+
+  var x1 = v1[0] as number;
+  var y1 = v1[1] as number;
+  var x2 = v2[0] as number;
+  var y2 = v2[1] as number;
+
+  var isHorizontal = Math.abs(y1 - y2) < 0.001;
+  var isVertical = Math.abs(x1 - x2) < 0.001;
+  if (!isHorizontal && !isVertical) return shape;
+
+  var thickness = Math.round((shape.stroke.width as number) * 1000) / 1000;
+  var width = isHorizontal ? Math.abs(x2 - x1) : thickness;
+  var height = isHorizontal ? thickness : Math.abs(y2 - y1);
+
+  if (width <= 0 || height <= 0) return shape;
+
+  var centerX = roundCoord((x1 + x2) / 2);
+  var centerY = roundCoord((y1 + y2) / 2);
+
+  var normalized: { [key: string]: any } = {
+    type: "rectangle",
+    size: [roundCoord(width), roundCoord(height)],
+    position: [centerX, centerY],
+  };
+
+  // Open paths visually come from stroke; use stroke color as fill for rectangle.
+  if (shape.stroke.color) {
+    normalized.fill = { color: shape.stroke.color };
+  } else if (shape.fill && shape.fill.color) {
+    normalized.fill = { color: shape.fill.color };
+  }
+
+  if (shape.name) normalized.name = shape.name;
+  if (shape.operators) normalized.operators = shape.operators;
+
+  return normalized;
 }
 
 /**
@@ -475,9 +534,17 @@ function readShapeGroup(group: PropertyGroup): object | null {
 
   if (!shapeResult) return null;
 
+  // Normalize common noisy path exports to cleaner primitives where possible.
+  shapeResult = normalizeSimplePathShape(shapeResult);
+
   // Add group name if different from default
   var groupName = group.name;
-  if (groupName && groupName !== "Group 1" && !groupName.match(/^Group \d+$/)) {
+  if (
+    groupName &&
+    groupName !== "Group 1" &&
+    !groupName.match(/^Group \d+$/) &&
+    !groupName.match(/^Shape \d+$/)
+  ) {
     shapeResult.name = groupName;
   }
 
@@ -492,15 +559,22 @@ function readShapeGroup(group: PropertyGroup): object | null {
     shapeResult.operators = operators;
   }
 
-  // Custom paths use group transform for position.
-  if (shapeResult.type === "path") {
+  // Path shapes (and normalized shapes) use group transform for position offset.
+  if (shapeResult.type === "path" || shapeResult.type === "rectangle" || shapeResult.type === "ellipse" || shapeResult.type === "polygon" || shapeResult.type === "star") {
     var groupTransform = group.property("ADBE Vector Transform Group") as PropertyGroup;
     if (groupTransform) {
       var groupPos = groupTransform.property("ADBE Vector Position") as Property;
       if (groupPos) {
         var pos = groupPos.value as number[];
         if (pos[0] !== 0 || pos[1] !== 0) {
-          shapeResult.position = [Math.round(pos[0]), Math.round(pos[1])];
+          if (shapeResult.position && shapeResult.position instanceof Array && shapeResult.position.length === 2) {
+            shapeResult.position = [
+              roundCoord((shapeResult.position[0] as number) + pos[0]),
+              roundCoord((shapeResult.position[1] as number) + pos[1]),
+            ];
+          } else {
+            shapeResult.position = [roundCoord(pos[0]), roundCoord(pos[1])];
+          }
         }
       }
     }

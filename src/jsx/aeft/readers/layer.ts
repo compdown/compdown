@@ -317,11 +317,10 @@ function readLayerStyles(layer: Layer): object[] | null {
     var styleType = styleTypeNames[matchName];
     if (!styleType) continue; // Skip unknown styles (e.g., "ADBE Blend Options Group")
 
-    var styleObj: { [key: string]: any } = { type: styleType };
+    // Skip disabled styles entirely to avoid exporting large default payloads
+    if (!styleGroup.enabled) continue;
 
-    if (!styleGroup.enabled) {
-      styleObj.enabled = false;
-    }
+    var styleObj: { [key: string]: any } = { type: styleType };
 
     // Read properties (same pattern as effects)
     var properties: { [key: string]: any } = {};
@@ -709,7 +708,6 @@ export function readLayer(layer: Layer): object {
   if (layer.solo) result.solo = true;
   if (!layer.audioEnabled) result.audioEnabled = false; // default is true
   if (layer.motionBlurEnabled) result.motionBlur = true;
-  if (layer.collapseTransformation) result.collapseTransformation = true;
   if (layer.guideLayer) result.guideLayer = true;
   if (!layer.effectsActive) result.effectsActive = false; // default is true
   if (layer.timeRemapEnabled) result.timeRemapEnabled = true;
@@ -735,9 +733,6 @@ export function readLayer(layer: Layer): object {
   if (trackMatteTypeName && trackMatteTypeName !== "none") {
     result.trackMatteType = trackMatteTypeName;
   }
-
-  // Label (only export non-default value)
-  if (layer.label !== 0) result.label = layer.label;
 
   // Blending mode
   var modeName = blendingModeNames[layer.blendingMode as number];

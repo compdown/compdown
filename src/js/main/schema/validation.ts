@@ -77,12 +77,47 @@ function normalizeColor(value: unknown): string | unknown {
 }
 
 /**
+ * Convert a hex color string to AE RGB array (0-1 range).
+ * Supports `RRGGBB` and `#RRGGBB`.
+ */
+function normalizeEffectColor(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+
+  const trimmed = value.trim();
+  const match = trimmed.match(/^#?([0-9a-fA-F]{6})$/);
+  if (!match) return value;
+
+  const hex = match[1];
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+
+  return [
+    Math.round((r / 255) * 1000) / 1000,
+    Math.round((g / 255) * 1000) / 1000,
+    Math.round((b / 255) * 1000) / 1000,
+  ];
+}
+
+/**
  * Normalize color properties in an object by checking all keys.
  */
 function normalizeColorProperties(obj: Record<string, unknown>): void {
   for (const key of Object.keys(obj)) {
     if (isColorProperty(key)) {
       obj[key] = normalizeColor(obj[key]);
+    }
+  }
+}
+
+/**
+ * Normalize color-like keys in effect/layer-style property maps.
+ * Effect color values are RGB arrays in 0-1 range.
+ */
+function normalizeEffectPropertyColors(obj: Record<string, unknown>): void {
+  for (const key of Object.keys(obj)) {
+    if (isColorProperty(key)) {
+      obj[key] = normalizeEffectColor(obj[key]);
     }
   }
 }
@@ -121,6 +156,26 @@ function preprocessParsedYaml(data: unknown): unknown {
 
               // Handle color properties on layer (not in effects - those use RGB arrays)
               normalizeColorProperties(layerObj);
+
+              if (Array.isArray(layerObj.effects)) {
+                for (const effect of layerObj.effects as unknown[]) {
+                  if (!effect || typeof effect !== "object") continue;
+                  const effectObj = effect as Record<string, unknown>;
+                  if (!effectObj.properties || typeof effectObj.properties !== "object") continue;
+
+                  normalizeEffectPropertyColors(effectObj.properties as Record<string, unknown>);
+                }
+              }
+
+              if (Array.isArray(layerObj.layerStyles)) {
+                for (const layerStyle of layerObj.layerStyles as unknown[]) {
+                  if (!layerStyle || typeof layerStyle !== "object") continue;
+                  const styleObj = layerStyle as Record<string, unknown>;
+                  if (!styleObj.properties || typeof styleObj.properties !== "object") continue;
+
+                  normalizeEffectPropertyColors(styleObj.properties as Record<string, unknown>);
+                }
+              }
             }
           }
         }

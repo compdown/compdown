@@ -56,6 +56,20 @@ compositions:
     expect(result.data!.compositions![0].layers).toHaveLength(2);
   });
 
+  it("accepts top-level layers with destination _timeline", () => {
+    const yaml = `
+destination: _timeline
+layers:
+  - name: Title
+    type: text
+    text: Hello
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+    expect(result.data!.destination).toBe("_timeline");
+    expect(result.data!.layers).toHaveLength(1);
+  });
+
   // ---------------------------------------------------------------------------
   // validateYaml – YAML syntax errors
   // ---------------------------------------------------------------------------
@@ -187,6 +201,22 @@ files: []
     expect(result.success).toBe(false);
     expect(
       result.errors.some((e) => e.message.includes("at least one"))
+    ).toBe(true);
+  });
+
+  it("rejects top-level layers without destination", () => {
+    const yaml = `
+layers:
+  - name: Title
+    type: text
+    text: Hello
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(false);
+    expect(
+      result.errors.some((e) =>
+        e.message.includes("Top-level 'layers' require 'destination: _timeline'")
+      )
     ).toBe(true);
   });
 

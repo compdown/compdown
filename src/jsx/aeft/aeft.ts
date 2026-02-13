@@ -12,6 +12,7 @@ import { readComp, collectFiles } from "./readers/comp";
  * Called from the panel via evalTS with a JSON object.
  */
 export const createFromDocument = (doc: {
+  destination?: "_timeline";
   folders?: Array<{ name: string; parent?: string }>;
   files?: Array<{
     id: string | number;
@@ -39,6 +40,7 @@ export const createFromDocument = (doc: {
       label?: number;
     }>;
   }>;
+  layers?: any[];
 }): { created: { folders: number; files: number; compositions: number; layers: number } } => {
   app.beginUndoGroup("Compdown: Create");
 
@@ -84,6 +86,21 @@ export const createFromDocument = (doc: {
         addMarkers(comp, compDef.markers);
       }
     }
+  }
+
+  // 7. Top-level layers into explicit destination
+  if (doc.layers && doc.layers.length > 0) {
+    if (doc.destination !== "_timeline") {
+      throw new Error("Top-level layers require destination: _timeline");
+    }
+
+    var targetComp = getActiveComp();
+    if (!(targetComp && targetComp instanceof CompItem)) {
+      throw new Error("destination: _timeline requires an active composition timeline");
+    }
+
+    createLayers(targetComp, doc.layers, fileMap, compMap);
+    stats.layers += doc.layers.length;
   }
 
   app.endUndoGroup();

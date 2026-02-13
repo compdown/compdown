@@ -770,13 +770,21 @@ export const FolderSchema = z.object({
 
 export type FolderItem = z.infer<typeof FolderSchema>;
 
+// --- Destination ---
+
+export const DestinationSchema = z.literal("_timeline");
+
+export type Destination = z.infer<typeof DestinationSchema>;
+
 // --- Root document ---
 
 export const CompdownDocumentSchema = z
   .object({
+    destination: DestinationSchema.optional(),
     folders: z.array(FolderSchema).optional(),
     files: z.array(FileSchema).optional(),
     compositions: z.array(CompSchema).optional(),
+    layers: z.array(LayerSchema).optional(),
   })
   .refine(
     (doc) => {
@@ -784,10 +792,23 @@ export const CompdownDocumentSchema = z
       return (
         (doc.folders && doc.folders.length > 0) ||
         (doc.files && doc.files.length > 0) ||
-        (doc.compositions && doc.compositions.length > 0)
+        (doc.compositions && doc.compositions.length > 0) ||
+        (doc.layers && doc.layers.length > 0)
       );
     },
-    { message: "Document must contain at least one of: folders, files, compositions" }
+    { message: "Document must contain at least one of: folders, files, compositions, layers" }
+  )
+  .refine(
+    (doc) => {
+      if (doc.layers && doc.layers.length > 0) {
+        return doc.destination === "_timeline";
+      }
+      return true;
+    },
+    {
+      message: "Top-level 'layers' require 'destination: _timeline'",
+      path: ["destination"],
+    }
   );
 
 export type CompdownDocument = z.infer<typeof CompdownDocumentSchema>;

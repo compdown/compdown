@@ -123,6 +123,39 @@ function normalizeEffectPropertyColors(obj: Record<string, unknown>): void {
 }
 
 /**
+ * Normalize known layer-level quirks and color properties.
+ */
+function preprocessLayerObject(layerObj: Record<string, unknown>): void {
+  // Handle type: null
+  if ("name" in layerObj && layerObj.type === null) {
+    layerObj.type = "null";
+  }
+
+  // Handle color properties on layer (not in effects - those use RGB arrays)
+  normalizeColorProperties(layerObj);
+
+  if (Array.isArray(layerObj.effects)) {
+    for (const effect of layerObj.effects as unknown[]) {
+      if (!effect || typeof effect !== "object") continue;
+      const effectObj = effect as Record<string, unknown>;
+      if (!effectObj.properties || typeof effectObj.properties !== "object") continue;
+
+      normalizeEffectPropertyColors(effectObj.properties as Record<string, unknown>);
+    }
+  }
+
+  if (Array.isArray(layerObj.layerStyles)) {
+    for (const layerStyle of layerObj.layerStyles as unknown[]) {
+      if (!layerStyle || typeof layerStyle !== "object") continue;
+      const styleObj = layerStyle as Record<string, unknown>;
+      if (!styleObj.properties || typeof styleObj.properties !== "object") continue;
+
+      normalizeEffectPropertyColors(styleObj.properties as Record<string, unknown>);
+    }
+  }
+}
+
+/**
  * Post-process parsed YAML to handle YAML quirks:
  * - `type: null` parses as JavaScript null, but we want the string "null"
  * - `color: 000000` parses as number 0, but we want the string "000000"
@@ -147,38 +180,19 @@ function preprocessParsedYaml(data: unknown): unknown {
         if (Array.isArray(compObj.layers)) {
           for (const layer of compObj.layers as unknown[]) {
             if (layer && typeof layer === "object") {
-              const layerObj = layer as Record<string, unknown>;
-
-              // Handle type: null
-              if ("name" in layerObj && layerObj.type === null) {
-                layerObj.type = "null";
-              }
-
-              // Handle color properties on layer (not in effects - those use RGB arrays)
-              normalizeColorProperties(layerObj);
-
-              if (Array.isArray(layerObj.effects)) {
-                for (const effect of layerObj.effects as unknown[]) {
-                  if (!effect || typeof effect !== "object") continue;
-                  const effectObj = effect as Record<string, unknown>;
-                  if (!effectObj.properties || typeof effectObj.properties !== "object") continue;
-
-                  normalizeEffectPropertyColors(effectObj.properties as Record<string, unknown>);
-                }
-              }
-
-              if (Array.isArray(layerObj.layerStyles)) {
-                for (const layerStyle of layerObj.layerStyles as unknown[]) {
-                  if (!layerStyle || typeof layerStyle !== "object") continue;
-                  const styleObj = layerStyle as Record<string, unknown>;
-                  if (!styleObj.properties || typeof styleObj.properties !== "object") continue;
-
-                  normalizeEffectPropertyColors(styleObj.properties as Record<string, unknown>);
-                }
-              }
+              preprocessLayerObject(layer as Record<string, unknown>);
             }
           }
         }
+      }
+    }
+  }
+
+  // Process top-level layers (destination-based authoring)
+  if (Array.isArray(obj.layers)) {
+    for (const layer of obj.layers) {
+      if (layer && typeof layer === "object") {
+        preprocessLayerObject(layer as Record<string, unknown>);
       }
     }
   }

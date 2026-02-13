@@ -176,6 +176,18 @@ compositions:
 
 ### Reference
 
+#### `destination`
+
+Controls where top-level `layers` are created.
+
+| Value       | Description |
+| ----------- | ----------- |
+| `_timeline` | Create top-level `layers` in the currently active composition timeline |
+
+Notes:
+- Required when using top-level `layers`.
+- If no composition timeline is active in After Effects, creation fails with an explicit error.
+
 #### `folders`
 
 | Property | Type   | Required | Description        |
@@ -210,6 +222,10 @@ compositions:
 #### `layers`
 
 Each layer must have exactly one of `type`, `file`, or `composition`.
+
+`layers` can be used in two places:
+- Nested under a composition in `compositions[].layers`
+- At the top level as `layers` (requires `destination: _timeline`)
 
 ##### Core identity and source
 

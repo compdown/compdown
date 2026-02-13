@@ -1,0 +1,53 @@
+export type CompdownDestination = "_timeline";
+
+export interface CompdownFolderDocumentItem {
+  name: string;
+  parent?: string;
+}
+
+export interface CompdownFileDocumentItem {
+  id: string | number;
+  path: string;
+  sequence?: boolean;
+  folder?: string;
+}
+
+export interface CompdownCompositionMarkerDocumentItem {
+  time: number;
+  comment?: string;
+  duration?: number;
+  chapter?: string;
+  url?: string;
+  label?: number;
+}
+
+export interface CompdownCompositionDocumentItem {
+  name: string;
+  width: number;
+  height: number;
+  duration: number;
+  framerate: number;
+  pixelAspect: number;
+  color: string;
+  folder?: string;
+  layers?: any[];
+  essentialGraphics?: Array<string | { property: string; name?: string }>;
+  markers?: CompdownCompositionMarkerDocumentItem[];
+}
+
+export interface CompdownCreateDocument {
+  destination?: CompdownDestination;
+  folders?: CompdownFolderDocumentItem[];
+  files?: CompdownFileDocumentItem[];
+  compositions?: CompdownCompositionDocumentItem[];
+  layers?: any[];
+}
+
+export interface CreateFromDocumentResult {
+  created: {
+    folders: number;
+    files: number;
+    compositions: number;
+    layers: number;
+  };
+}

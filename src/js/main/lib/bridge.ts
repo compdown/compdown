@@ -1,10 +1,15 @@
 import { evalTS } from "../../lib/utils/bolt";
-import type { CompdownDocument } from "../schema/types";
+import type {
+  CompdownCreateDocument,
+  CreateFromDocumentResult,
+} from "../../../shared/compdownDocument";
 
 /**
  * Send a validated Compdown document to ExtendScript for creation in AE.
  */
-export async function createInAE(doc: CompdownDocument) {
+export async function createInAE(
+  doc: CompdownCreateDocument
+): Promise<CreateFromDocumentResult> {
   return evalTS("createFromDocument", doc as any);
 }
 

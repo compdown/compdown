@@ -1,5 +1,3 @@
-export type CompdownDestination = "_timeline";
-
 export interface CompdownFolderDocumentItem {
   name: string;
   parent?: string;
@@ -35,12 +33,15 @@ export interface CompdownCompositionDocumentItem {
   markers?: CompdownCompositionMarkerDocumentItem[];
 }
 
+export interface CompdownTimelineDocumentItem {
+  layers: any[];
+}
+
 export interface CompdownCreateDocument {
-  destination?: CompdownDestination;
+  _timeline?: CompdownTimelineDocumentItem;
   folders?: CompdownFolderDocumentItem[];
   files?: CompdownFileDocumentItem[];
   compositions?: CompdownCompositionDocumentItem[];
-  layers?: any[];
 }
 
 export interface CreateFromDocumentResult {

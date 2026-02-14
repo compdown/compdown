@@ -65,19 +65,15 @@ export const createFromDocument = (
       }
     }
 
-    // 7. Top-level layers into explicit destination
-    if (doc.layers && doc.layers.length > 0) {
-      if (doc.destination !== "_timeline") {
-        throw new Error("Top-level layers require destination: _timeline");
-      }
-
+    // 7. Top-level _timeline layers
+    if (doc._timeline && doc._timeline.layers && doc._timeline.layers.length > 0) {
       var targetComp = getActiveComp();
       if (!(targetComp && targetComp instanceof CompItem)) {
-        throw new Error("destination: _timeline requires an active composition timeline");
+        throw new Error("_timeline.layers requires an active composition timeline");
       }
 
-      createLayers(targetComp, doc.layers, fileMap, compMap);
-      stats.layers += doc.layers.length;
+      createLayers(targetComp, doc._timeline.layers, fileMap, compMap);
+      stats.layers += doc._timeline.layers.length;
     }
 
     return { created: stats };

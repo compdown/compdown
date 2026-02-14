@@ -2351,30 +2351,23 @@ describe("EssentialGraphicsItemSchema", () => {
 // ---------------------------------------------------------------------------
 
 describe("CompdownDocumentSchema", () => {
-  it("accepts top-level layers when destination is _timeline", () => {
+  it("accepts top-level layers in _timeline block", () => {
     const result = CompdownDocumentSchema.safeParse({
-      destination: "_timeline",
-      layers: [{ name: "Title", type: "text", text: "Hello" }],
+      _timeline: { layers: [{ name: "Title", type: "text", text: "Hello" }] },
     });
     expect(result.success).toBe(true);
   });
 
-  it("rejects top-level layers without destination", () => {
+  it("rejects legacy top-level layers key", () => {
     const result = CompdownDocumentSchema.safeParse({
       layers: [{ name: "Title", type: "text", text: "Hello" }],
     });
     expect(result.success).toBe(false);
-    expect(
-      result.error!.issues.some((i) =>
-        i.message.includes("Top-level 'layers' require '_timeline.layers'")
-      )
-    ).toBe(true);
   });
 
-  it("rejects invalid destination value", () => {
+  it("rejects legacy destination key", () => {
     const result = CompdownDocumentSchema.safeParse({
       destination: "$timeline",
-      layers: [{ name: "Title", type: "text", text: "Hello" }],
     });
     expect(result.success).toBe(false);
   });

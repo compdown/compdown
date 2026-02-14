@@ -772,42 +772,38 @@ export type FolderItem = z.infer<typeof FolderSchema>;
 
 // --- Destination ---
 
-export const DestinationSchema = z.literal("_timeline");
+export const TimelineSchema = z
+  .object({
+    layers: z.array(LayerSchema).min(1),
+  })
+  .strict();
 
-export type Destination = z.infer<typeof DestinationSchema>;
+export type Timeline = z.infer<typeof TimelineSchema>;
 
 // --- Root document ---
 
 export const CompdownDocumentSchema = z
   .object({
-    destination: DestinationSchema.optional(),
+    _timeline: TimelineSchema.optional(),
+    // Explicitly reject legacy top-level targeting keys.
+    destination: z.never().optional(),
+    layers: z.never().optional(),
     folders: z.array(FolderSchema).optional(),
     files: z.array(FileSchema).optional(),
     compositions: z.array(CompSchema).optional(),
-    layers: z.array(LayerSchema).optional(),
   })
   .refine(
     (doc) => {
       // Must have at least one section
       return (
+        (doc._timeline && doc._timeline.layers.length > 0) ||
         (doc.folders && doc.folders.length > 0) ||
         (doc.files && doc.files.length > 0) ||
-        (doc.compositions && doc.compositions.length > 0) ||
-        (doc.layers && doc.layers.length > 0)
+        (doc.compositions && doc.compositions.length > 0)
       );
     },
-    { message: "Document must contain at least one of: folders, files, compositions, layers" }
-  )
-  .refine(
-    (doc) => {
-      if (doc.layers && doc.layers.length > 0) {
-        return doc.destination === "_timeline";
-      }
-      return true;
-    },
     {
-      message: "Top-level 'layers' require '_timeline.layers' (or legacy 'destination: _timeline')",
-      path: ["destination"],
+      message: "Document must contain at least one of: _timeline, folders, files, compositions",
     }
   );
 

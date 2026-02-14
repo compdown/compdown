@@ -167,20 +167,6 @@ function preprocessParsedYaml(data: unknown): unknown {
 
   const obj = data as Record<string, unknown>;
 
-  // Alias syntax:
-  // _timeline:
-  //   layers: [...]
-  // Normalize to destination/layers for downstream schema/runtime.
-  if (obj._timeline && typeof obj._timeline === "object") {
-    const timelineObj = obj._timeline as Record<string, unknown>;
-    if (obj.destination === undefined) {
-      obj.destination = "_timeline";
-    }
-    if (obj.layers === undefined && Array.isArray(timelineObj.layers)) {
-      obj.layers = timelineObj.layers;
-    }
-  }
-
   // Recurse into compositions and layers
   if (Array.isArray(obj.compositions)) {
     for (const comp of obj.compositions) {
@@ -202,16 +188,39 @@ function preprocessParsedYaml(data: unknown): unknown {
     }
   }
 
-  // Process top-level layers (destination-based authoring)
-  if (Array.isArray(obj.layers)) {
-    for (const layer of obj.layers) {
-      if (layer && typeof layer === "object") {
-        preprocessLayerObject(layer as Record<string, unknown>);
+  // Process top-level timeline layers
+  if (obj._timeline && typeof obj._timeline === "object") {
+    const timelineObj = obj._timeline as Record<string, unknown>;
+    if (Array.isArray(timelineObj.layers)) {
+      for (const layer of timelineObj.layers) {
+        if (layer && typeof layer === "object") {
+          preprocessLayerObject(layer as Record<string, unknown>);
+        }
       }
     }
   }
 
   return data;
+}
+
+function validateNoLegacyTimelineSyntax(yamlText: string, parsed: unknown): ValidationError[] {
+  if (!parsed || typeof parsed !== "object") return [];
+  const obj = parsed as Record<string, unknown>;
+
+  if ("destination" in obj || "layers" in obj) {
+    const line = "destination" in obj
+      ? findLineForPath(yamlText, ["destination"])
+      : findLineForPath(yamlText, ["layers"]);
+    return [
+      {
+        line,
+        message: "Legacy top-level 'destination/layers' is no longer supported; use '_timeline.layers' instead",
+        path: ["_timeline", "layers"],
+      },
+    ];
+  }
+
+  return [];
 }
 
 /**
@@ -245,6 +254,12 @@ export function validateYaml(yamlText: string): ValidationResult {
 
   // Step 1.5: Normalize YAML quirks (null literals, numeric colors)
   preprocessParsedYaml(parsed);
+
+  // Step 1.75: Reject removed legacy top-level syntax with a focused error.
+  const legacySyntaxErrors = validateNoLegacyTimelineSyntax(yamlText, parsed);
+  if (legacySyntaxErrors.length > 0) {
+    return { success: false, errors: legacySyntaxErrors };
+  }
 
   // Step 2: Validate with Zod
   const result = CompdownDocumentSchema.safeParse(parsed);

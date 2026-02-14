@@ -56,21 +56,7 @@ compositions:
     expect(result.data!.compositions![0].layers).toHaveLength(2);
   });
 
-  it("accepts top-level layers with destination _timeline", () => {
-    const yaml = `
-destination: _timeline
-layers:
-  - name: Title
-    type: text
-    text: Hello
-`;
-    const result = validateYaml(yaml);
-    expect(result.success).toBe(true);
-    expect(result.data!.destination).toBe("_timeline");
-    expect(result.data!.layers).toHaveLength(1);
-  });
-
-  it("accepts _timeline block syntax and normalizes to destination/layers", () => {
+  it("accepts top-level layers with _timeline block", () => {
     const yaml = `
 _timeline:
   layers:
@@ -80,8 +66,7 @@ _timeline:
 `;
     const result = validateYaml(yaml);
     expect(result.success).toBe(true);
-    expect(result.data!.destination).toBe("_timeline");
-    expect(result.data!.layers).toHaveLength(1);
+    expect(result.data!._timeline!.layers).toHaveLength(1);
   });
 
   // ---------------------------------------------------------------------------
@@ -218,8 +203,9 @@ files: []
     ).toBe(true);
   });
 
-  it("rejects top-level layers without destination", () => {
+  it("rejects legacy top-level destination/layers syntax", () => {
     const yaml = `
+destination: _timeline
 layers:
   - name: Title
     type: text
@@ -229,7 +215,7 @@ layers:
     expect(result.success).toBe(false);
     expect(
       result.errors.some((e) =>
-        e.message.includes("Top-level 'layers' require '_timeline.layers'")
+        e.message.includes("Legacy top-level 'destination/layers' is no longer supported")
       )
     ).toBe(true);
   });

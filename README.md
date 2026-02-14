@@ -66,7 +66,7 @@ npx tsc -p tsconfig-build.json --noEmit
 
 ## YAML Schema
 
-A Compdown document has optional top-level keys: `_timeline`, `destination`, `layers`, `folders`, `files`, and `compositions`. At least one content section must be present (`layers`, `folders`, `files`, or `compositions`).
+A Compdown document has optional top-level keys: `_timeline`, `folders`, `files`, and `compositions`. At least one content section must be present (`_timeline`, `folders`, `files`, or `compositions`).
 
 Preferred top-level layers syntax:
 
@@ -79,15 +79,6 @@ _timeline:
 ```
 
 This adds the layers into the currently active composition timeline.
-Legacy syntax is still supported:
-
-```yaml
-destination: _timeline
-layers:
-  - name: My Layer
-    type: text
-    text: Hello
-```
 
 > [!NOTE]
 > Compdown automatically handles some YAML parsing quirks so you don't need extra quotes:
@@ -200,7 +191,6 @@ Preferred target block for top-level `layers`.
 Notes:
 - Use `_timeline.layers` for top-level layer authoring.
 - If no composition timeline is active in After Effects, creation fails with an explicit error.
-- Legacy `destination: _timeline` + top-level `layers` is still supported for backward compatibility.
 
 #### `folders`
 
@@ -240,7 +230,6 @@ Each layer must have exactly one of `type`, `file`, or `composition`.
 `layers` can be used in two places:
 - Nested under a composition in `compositions[].layers`
 - Inside `_timeline.layers` at the top level (preferred)
-- As legacy top-level `layers` (requires `destination: _timeline`)
 
 ##### Core identity and source
 

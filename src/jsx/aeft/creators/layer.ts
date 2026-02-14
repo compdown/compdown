@@ -1020,11 +1020,6 @@ export const createLayers = (
     // Numeric properties
     if (layerDef.label !== undefined) newLayer.label = layerDef.label;
 
-    // Transform
-    if (layerDef.transform) {
-      applyTransform(newLayer, layerDef.transform);
-    }
-
     // Effects
     if (layerDef.effects && layerDef.effects.length > 0) {
       applyEffects(newLayer, layerDef.effects);
@@ -1070,7 +1065,15 @@ export const createLayers = (
     }
   }
 
-  // Third pass: lock layers (must happen last, locked layers can't be modified)
+  // Third pass: apply transforms after parenting so local coordinates are preserved as-authored.
+  for (var t = 0; t < layers.length; t++) {
+    var transformDef = layers[t].transform;
+    if (transformDef) {
+      applyTransform(layerNameMap[layers[t].name], transformDef);
+    }
+  }
+
+  // Fourth pass: lock layers (must happen last, locked layers can't be modified)
   for (var k = 0; k < layers.length; k++) {
     if (layers[k].locked) {
       layerNameMap[layers[k].name].locked = true;

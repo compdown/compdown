@@ -80,6 +80,20 @@ _timeline:
 
 This adds the layers into the currently active composition timeline.
 
+To modify or delete existing layers, use explicit verbs:
+
+```yaml
+_timeline:
+  set:
+    layers:
+      - name: Title
+        transform:
+          position: [960, 500]
+  remove:
+    layers:
+      - name: Temp Layer
+```
+
 > [!NOTE]
 > Compdown automatically handles some YAML parsing quirks so you don't need extra quotes:
 > - `type: null` works as-is (YAML would normally parse this as a null value, not the string "null")
@@ -182,15 +196,18 @@ compositions:
 
 #### `_timeline`
 
-Preferred target block for top-level `layers`.
+Preferred target block for timeline actions.
 
 | Value       | Description |
 | ----------- | ----------- |
-| `_timeline` | Create `layers` in the currently active composition timeline |
+| `_timeline` | Run add/set/remove layer actions in the currently active composition timeline |
 
 Notes:
-- Use `_timeline.layers` for top-level layer authoring.
+- `_timeline.layers` adds/creates new layers (implicit create).
+- `_timeline.set.layers` updates exactly one existing layer per entry (match by exact `name`).
+- `_timeline.remove.layers` deletes exactly one existing layer per entry (match by exact `name`).
 - If no composition timeline is active in After Effects, creation fails with an explicit error.
+- `set/remove` fail if no layer matches or if multiple layers have the same name.
 
 #### `folders`
 

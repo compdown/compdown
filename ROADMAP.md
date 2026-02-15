@@ -2,101 +2,57 @@
 
 Tracking improvements and new features for the project.
 
-## Improvements (In Progress)
+## Active Milestone
 
-### ~~1. Fix anchor point export~~
-**Status:** Done
-**Effort:** 5 minutes
-**Issue:** `readComp()` exports position/scale/rotation/opacity but skips anchorPoint. Breaks round-trip.
+### 1. Context Selectors (Phase 1)
+**Status:** In progress (next)
+**Goal:** Target existing AE context explicitly (not only new composition creation).
 
-### ~~2. Keyframe easing~~
-**Status:** Done
-**Effort:** Medium
-**Issue:** All keyframes are linear. Support `easeIn`, `easeOut`, `hold`, and custom bezier curves.
+**Spec draft:** `docs/syntax-actions-v1.md`
 
-**Syntax:**
-```yaml
-transform:
-  position:
-    - time: 0
-      value: [0, 0]
-      easing: easeOut
-    - time: 2
-      value: [1920, 1080]
-      easing: easeIn
-```
+**Scope (Phase 1):**
+- Keep `_timeline` as the canonical selector for active comp timeline.
+- Add one additional explicit selector for existing context (to be finalized before implementation).
+- Ensure selector syntax is consistent and extensible for future `_selected`, named comp/layer selectors.
+- Keep error messages user-friendly and migration-safe.
 
-### ~~3. Text styling~~
-**Status:** Done
-**Effort:** Medium
-**Issue:** Only fontSize/font supported. Missing color, tracking, justification, etc.
+**Acceptance criteria:**
+- Selector syntax is documented with examples.
+- Parser/schema validates selector blocks consistently.
+- Runtime applies operations to the intended context or fails with clear errors.
+- Tests cover happy paths and invalid selector usage.
 
-**Added properties:**
-- fillColor (hex)
-- strokeColor (hex)
-- strokeWidth
-- tracking
-- leading
-- justification (left, center, right)
+## Next Milestones
 
-### ~~4. Markers~~
-**Status:** Done
-**Effort:** Low
-**Issue:** No way to add comp or layer markers. Useful for .mogrt and scripting.
+### 2. Layer Targeting + Effects on Existing Layers
+**Status:** Planned
+**Goal:** Apply effects/changes to existing layers without recreating everything.
 
-**Syntax:**
-```yaml
-compositions:
-  - name: My Comp
-    markers:
-      - time: 1
-        comment: "Intro starts"
-      - time: 5
-        comment: "Outro"
-        duration: 2
-```
+**Scope:**
+- Introduce explicit layer targeting primitives.
+- Add effect application/update semantics on selected/targeted layers.
+- Define conflict behavior (replace, merge, append).
 
-### ~~5. Warn on missing parent layer~~
-**Status:** Done
-**Effort:** Low
-**Issue:** If you reference a non-existent parent layer, it silently skips. Should warn or error.
+### 3. Authoring UX (Editor Assistance)
+**Status:** Planned
+**Goal:** Make writing syntax accessible for non-dev users.
 
-**Fixed:** Now throws an error with the missing parent name and the layer that referenced it.
+**Scope:**
+- Context-aware autocomplete/snippets.
+- Inline examples for common tasks.
+- Human-readable validation errors with direct fixes.
 
----
+### 4. Migration + Compatibility Tooling
+**Status:** Planned
+**Goal:** Keep syntax evolution clean while reducing friction.
 
-## Future Features
+**Scope:**
+- Guided migration messages for deprecated patterns.
+- Optional auto-rewrite helper for legacy docs/snippets.
+- Clear changelog entries and docs diffs.
 
-### ~~Shape layers (custom paths)~~
-**Status:** Done
-Create custom path shapes (Bezier) via YAML.
+## Recently Completed
 
-### ~~Expressions~~
-**Status:** Done
-Link properties with AE expressions via `expressions` object on transform and effects.
-
-### ~~3D camera/lights~~
-**Status:** Done
-Create camera and light layers with full property support.
-
-### ~~Masks/paths~~
-**Status:** Done
-Add masks to layers with animatable paths.
-
-### ~~Audio layers~~
-**Status:** Done
-Create audio layers from file references.
-
-### ~~Separate position dimensions~~
-**Status:** Done
-Keyframe X and Y position independently via `positionX` and `positionY`.
-
-### ~~Text animators~~
-**Status:** Done
-Per-character animation via text animators.
-
----
-
-## Completed
-
-_(Items move here when done)_
+- `_timeline` top-level block syntax for adding layers to active timeline.
+- Removal of legacy `destination/layers` top-level format.
+- Parser/runtime/docs/test alignment for the new syntax.

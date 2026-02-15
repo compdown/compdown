@@ -1080,3 +1080,282 @@ export const createLayers = (
     }
   }
 };
+
+function findLayersByName(comp: CompItem, name: string): Layer[] {
+  var matches: Layer[] = [];
+  for (var i = 1; i <= comp.numLayers; i++) {
+    var layer = comp.layer(i);
+    if (layer && layer.name === name) {
+      matches.push(layer);
+    }
+  }
+  return matches;
+}
+
+function resolveUniqueLayer(comp: CompItem, name: string, action: string): Layer {
+  var matches = findLayersByName(comp, name);
+  if (matches.length === 0) {
+    throw new Error("Layer not found for " + action + ': "' + name + '"');
+  }
+  if (matches.length > 1) {
+    throw new Error("Multiple layers matched for " + action + ': "' + name + '"');
+  }
+  return matches[0];
+}
+
+function applyTextPatch(layer: Layer, layerDef: LayerDef): void {
+  var hasTextUpdate =
+    layerDef.text !== undefined ||
+    layerDef.fontSize !== undefined ||
+    layerDef.font !== undefined ||
+    layerDef.fillColor !== undefined ||
+    layerDef.strokeColor !== undefined ||
+    layerDef.strokeWidth !== undefined ||
+    layerDef.tracking !== undefined ||
+    layerDef.leading !== undefined ||
+    layerDef.justification !== undefined;
+
+  if (!hasTextUpdate) return;
+
+  var textProp: Property | null = null;
+  try {
+    textProp = layer
+      .property("ADBE Text Properties")
+      .property("ADBE Text Document") as Property;
+  } catch (e) {
+    textProp = null;
+  }
+  if (!textProp) {
+    throw new Error('Layer "' + layerDef.name + '" is not a text layer');
+  }
+
+  var textDoc = textProp.value as TextDocument;
+  if (layerDef.text !== undefined) textDoc.text = layerDef.text;
+  if (layerDef.fontSize !== undefined) textDoc.fontSize = layerDef.fontSize;
+  if (layerDef.font !== undefined) textDoc.font = layerDef.font;
+  if (layerDef.fillColor !== undefined) {
+    var fr = parseInt(layerDef.fillColor.substring(0, 2), 16) / 255;
+    var fg = parseInt(layerDef.fillColor.substring(2, 4), 16) / 255;
+    var fb = parseInt(layerDef.fillColor.substring(4, 6), 16) / 255;
+    textDoc.fillColor = [fr, fg, fb];
+  }
+  if (layerDef.strokeColor !== undefined) {
+    var sr = parseInt(layerDef.strokeColor.substring(0, 2), 16) / 255;
+    var sg = parseInt(layerDef.strokeColor.substring(2, 4), 16) / 255;
+    var sb = parseInt(layerDef.strokeColor.substring(4, 6), 16) / 255;
+    textDoc.strokeColor = [sr, sg, sb];
+    textDoc.applyStroke = true;
+  }
+  if (layerDef.strokeWidth !== undefined) {
+    textDoc.strokeWidth = layerDef.strokeWidth;
+    textDoc.applyStroke = true;
+  }
+  if (layerDef.tracking !== undefined) textDoc.tracking = layerDef.tracking;
+  if (layerDef.leading !== undefined) textDoc.leading = layerDef.leading;
+  if (layerDef.justification !== undefined) {
+    var justMap: { [key: string]: ParagraphJustification } = {
+      left: ParagraphJustification.LEFT_JUSTIFY,
+      center: ParagraphJustification.CENTER_JUSTIFY,
+      right: ParagraphJustification.RIGHT_JUSTIFY,
+    };
+    if (justMap[layerDef.justification]) {
+      textDoc.justification = justMap[layerDef.justification];
+    }
+  }
+  textProp.setValue(textDoc);
+}
+
+/**
+ * Update existing layers by exact name.
+ * Each entry must resolve to exactly one layer.
+ */
+export const setLayers = (comp: CompItem, layers: LayerDef[]): void => {
+  for (var i = 0; i < layers.length; i++) {
+    var layerDef = layers[i];
+    var layer = resolveUniqueLayer(comp, layerDef.name, "set");
+
+    var wasLocked = layer.locked;
+    if (wasLocked) {
+      layer.locked = false;
+    }
+
+    // Parent first so local transform updates are preserved in authored space.
+    if (layerDef.parent !== undefined) {
+      var parentLayer = resolveUniqueLayer(comp, layerDef.parent, "set parent");
+      layer.parent = parentLayer;
+    }
+
+    // Timing
+    if (layerDef.startTime !== undefined) layer.startTime = layerDef.startTime;
+    if (layerDef.inPoint !== undefined) layer.inPoint = layerDef.inPoint;
+    if (layerDef.outPoint !== undefined) layer.outPoint = layerDef.outPoint;
+
+    // Layer flags
+    if (layerDef.enabled !== undefined) layer.enabled = layerDef.enabled;
+    if (layerDef.shy !== undefined) layer.shy = layerDef.shy;
+    if (layerDef.threeDLayer !== undefined) layer.threeDLayer = layerDef.threeDLayer;
+
+    // Additional boolean flags
+    if (layerDef.solo !== undefined) layer.solo = layerDef.solo;
+    if (layerDef.audioEnabled !== undefined) layer.audioEnabled = layerDef.audioEnabled;
+    if (layerDef.motionBlur !== undefined) layer.motionBlurEnabled = layerDef.motionBlur;
+    if (layerDef.collapseTransformation !== undefined)
+      layer.collapseTransformation = layerDef.collapseTransformation;
+    if (layerDef.guideLayer !== undefined) layer.guideLayer = layerDef.guideLayer;
+    if (layerDef.effectsActive !== undefined) layer.effectsActive = layerDef.effectsActive;
+    if (layerDef.timeRemapEnabled !== undefined)
+      layer.timeRemapEnabled = layerDef.timeRemapEnabled;
+
+    // Blending mode
+    if (layerDef.blendingMode && blendingModes[layerDef.blendingMode]) {
+      layer.blendingMode = blendingModes[layerDef.blendingMode];
+    }
+
+    // Quality and rendering enums
+    if (layerDef.quality && qualityModes[layerDef.quality]) {
+      layer.quality = qualityModes[layerDef.quality];
+    }
+    if (layerDef.samplingQuality && samplingQualities[layerDef.samplingQuality]) {
+      layer.samplingQuality = samplingQualities[layerDef.samplingQuality];
+    }
+    if (layerDef.autoOrient && autoOrientTypes[layerDef.autoOrient]) {
+      layer.autoOrient = autoOrientTypes[layerDef.autoOrient];
+    }
+    if (layerDef.frameBlendingType && frameBlendingTypes[layerDef.frameBlendingType]) {
+      layer.frameBlendingType = frameBlendingTypes[layerDef.frameBlendingType];
+    }
+    if (layerDef.trackMatteType && trackMatteTypes[layerDef.trackMatteType]) {
+      layer.trackMatteType = trackMatteTypes[layerDef.trackMatteType];
+    }
+
+    // Numeric properties
+    if (layerDef.label !== undefined) layer.label = layerDef.label;
+
+    // Text updates
+    applyTextPatch(layer, layerDef);
+
+    // Camera updates
+    if (
+      layerDef.zoom !== undefined ||
+      layerDef.depthOfField !== undefined ||
+      layerDef.focusDistance !== undefined ||
+      layerDef.aperture !== undefined ||
+      layerDef.blurLevel !== undefined
+    ) {
+      var cameraLayer = layer as CameraLayer;
+      var cameraOptions = cameraLayer.cameraOption;
+      if (!cameraOptions) {
+        throw new Error('Layer "' + layerDef.name + '" is not a camera layer');
+      }
+      if (layerDef.zoom !== undefined) {
+        (cameraOptions.property("ADBE Camera Zoom") as Property).setValue(layerDef.zoom);
+      }
+      if (layerDef.depthOfField !== undefined) {
+        (cameraOptions.property("ADBE Camera Depth of Field") as Property).setValue(
+          layerDef.depthOfField ? 1 : 0
+        );
+      }
+      if (layerDef.focusDistance !== undefined) {
+        (cameraOptions.property("ADBE Camera Focus Distance") as Property).setValue(
+          layerDef.focusDistance
+        );
+      }
+      if (layerDef.aperture !== undefined) {
+        (cameraOptions.property("ADBE Camera Aperture") as Property).setValue(layerDef.aperture);
+      }
+      if (layerDef.blurLevel !== undefined) {
+        (cameraOptions.property("ADBE Camera Blur Level") as Property).setValue(layerDef.blurLevel);
+      }
+    }
+
+    // Light updates
+    if (
+      layerDef.intensity !== undefined ||
+      layerDef.lightColor !== undefined ||
+      layerDef.coneAngle !== undefined ||
+      layerDef.coneFeather !== undefined ||
+      layerDef.castsShadows !== undefined ||
+      layerDef.shadowDarkness !== undefined ||
+      layerDef.shadowDiffusion !== undefined
+    ) {
+      var lightLayer = layer as LightLayer;
+      var lightOptions = lightLayer.lightOption;
+      if (!lightOptions) {
+        throw new Error('Layer "' + layerDef.name + '" is not a light layer');
+      }
+      if (layerDef.intensity !== undefined) {
+        (lightOptions.property("ADBE Light Intensity") as Property).setValue(layerDef.intensity);
+      }
+      if (layerDef.lightColor !== undefined) {
+        var lr = parseInt(layerDef.lightColor.substring(0, 2), 16) / 255;
+        var lg = parseInt(layerDef.lightColor.substring(2, 4), 16) / 255;
+        var lb = parseInt(layerDef.lightColor.substring(4, 6), 16) / 255;
+        (lightOptions.property("ADBE Light Color") as Property).setValue([lr, lg, lb]);
+      }
+      if (layerDef.coneAngle !== undefined) {
+        (lightOptions.property("ADBE Light Cone Angle") as Property).setValue(layerDef.coneAngle);
+      }
+      if (layerDef.coneFeather !== undefined) {
+        (lightOptions.property("ADBE Light Cone Feather 2") as Property).setValue(
+          layerDef.coneFeather
+        );
+      }
+      if (layerDef.castsShadows !== undefined) {
+        (lightOptions.property("ADBE Light Casts Shadows") as Property).setValue(
+          layerDef.castsShadows ? 1 : 0
+        );
+      }
+      if (layerDef.shadowDarkness !== undefined) {
+        (lightOptions.property("ADBE Light Shadow Darkness") as Property).setValue(
+          layerDef.shadowDarkness
+        );
+      }
+      if (layerDef.shadowDiffusion !== undefined) {
+        (lightOptions.property("ADBE Light Shadow Diffusion") as Property).setValue(
+          layerDef.shadowDiffusion
+        );
+      }
+    }
+
+    // Effects / styles / masks / text animators
+    if (layerDef.effects && layerDef.effects.length > 0) {
+      applyEffects(layer, layerDef.effects);
+    }
+    if (layerDef.layerStyles && layerDef.layerStyles.length > 0) {
+      applyLayerStyles(layer, layerDef.layerStyles, comp);
+    }
+    if (layerDef.masks && layerDef.masks.length > 0) {
+      applyMasks(layer as AVLayer, layerDef.masks);
+    }
+    if (layerDef.textAnimators && layerDef.textAnimators.length > 0) {
+      applyTextAnimators(layer as TextLayer, layerDef.textAnimators);
+    }
+
+    // Transform after parent assignment
+    if (layerDef.transform) {
+      applyTransform(layer, layerDef.transform);
+    }
+
+    // Lock state last
+    if (layerDef.locked !== undefined) {
+      layer.locked = layerDef.locked;
+    } else if (wasLocked) {
+      layer.locked = true;
+    }
+  }
+};
+
+/**
+ * Remove existing layers by exact name.
+ * Each entry must resolve to exactly one layer.
+ */
+export const removeLayers = (comp: CompItem, layers: Array<{ name: string }>): void => {
+  for (var i = 0; i < layers.length; i++) {
+    var layer = resolveUniqueLayer(comp, layers[i].name, "remove");
+    var wasLocked = layer.locked;
+    if (wasLocked) {
+      layer.locked = false;
+    }
+    layer.remove();
+  }
+};

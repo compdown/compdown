@@ -198,6 +198,17 @@ function preprocessParsedYaml(data: unknown): unknown {
         }
       }
     }
+    if (
+      timelineObj.set &&
+      typeof timelineObj.set === "object" &&
+      Array.isArray((timelineObj.set as Record<string, unknown>).layers)
+    ) {
+      for (const layer of (timelineObj.set as Record<string, unknown>).layers as unknown[]) {
+        if (layer && typeof layer === "object") {
+          preprocessLayerObject(layer as Record<string, unknown>);
+        }
+      }
+    }
   }
 
   return data;

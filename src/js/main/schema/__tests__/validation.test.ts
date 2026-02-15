@@ -69,6 +69,32 @@ _timeline:
     expect(result.data!._timeline!.layers).toHaveLength(1);
   });
 
+  it("accepts _timeline.set.layers updates", () => {
+    const yaml = `
+_timeline:
+  set:
+    layers:
+      - name: Title
+        transform:
+          opacity: 85
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+    expect(result.data!._timeline!.set!.layers).toHaveLength(1);
+  });
+
+  it("accepts _timeline.remove.layers deletes", () => {
+    const yaml = `
+_timeline:
+  remove:
+    layers:
+      - name: Temp
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(true);
+    expect(result.data!._timeline!.remove!.layers).toHaveLength(1);
+  });
+
   // ---------------------------------------------------------------------------
   // validateYaml – YAML syntax errors
   // ---------------------------------------------------------------------------
@@ -216,6 +242,19 @@ layers:
     expect(
       result.errors.some((e) =>
         e.message.includes("Legacy top-level 'destination/layers' is no longer supported")
+      )
+    ).toBe(true);
+  });
+
+  it("rejects _timeline when no actions are provided", () => {
+    const yaml = `
+_timeline: {}
+`;
+    const result = validateYaml(yaml);
+    expect(result.success).toBe(false);
+    expect(
+      result.errors.some((e) =>
+        e.message.includes("_timeline must include at least one of")
       )
     ).toBe(true);
   });

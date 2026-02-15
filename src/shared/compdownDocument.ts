@@ -34,7 +34,15 @@ export interface CompdownCompositionDocumentItem {
 }
 
 export interface CompdownTimelineDocumentItem {
-  layers: any[];
+  layers?: any[];
+  set?: {
+    layers?: any[];
+  };
+  remove?: {
+    layers?: Array<{
+      name: string;
+    }>;
+  };
 }
 
 export interface CompdownCreateDocument {

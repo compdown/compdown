@@ -2358,6 +2358,46 @@ describe("CompdownDocumentSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts _timeline.set.layers updates", () => {
+    const result = CompdownDocumentSchema.safeParse({
+      _timeline: {
+        set: {
+          layers: [{ name: "Title", transform: { opacity: 85 } }],
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts _timeline.remove.layers deletes", () => {
+    const result = CompdownDocumentSchema.safeParse({
+      _timeline: {
+        remove: {
+          layers: [{ name: "Temp Layer" }],
+        },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects _timeline with no actions", () => {
+    const result = CompdownDocumentSchema.safeParse({
+      _timeline: {},
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects set layer entries with only name", () => {
+    const result = CompdownDocumentSchema.safeParse({
+      _timeline: {
+        set: {
+          layers: [{ name: "Title" }],
+        },
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects legacy top-level layers key", () => {
     const result = CompdownDocumentSchema.safeParse({
       layers: [{ name: "Title", type: "text", text: "Hello" }],

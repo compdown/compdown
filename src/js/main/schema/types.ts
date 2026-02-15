@@ -703,6 +703,115 @@ export const LayerSchema = z
 
 export type Layer = z.infer<typeof LayerSchema>;
 
+// --- Timeline Actions ---
+
+export const LayerSetSchema = z
+  .object({
+    name: z.string().min(1),
+
+    // Timing
+    inPoint: z.number().min(0).optional(),
+    outPoint: z.number().min(0).optional(),
+    startTime: z.number().optional(),
+
+    // Text updates
+    text: z.string().optional(),
+    fontSize: z.number().positive().optional(),
+    font: z.string().optional(),
+    fillColor: z
+      .string()
+      .regex(/^[0-9a-fA-F]{6}$/, "Must be a 6-character hex color (e.g. FFFFFF)")
+      .optional(),
+    strokeColor: z
+      .string()
+      .regex(/^[0-9a-fA-F]{6}$/, "Must be a 6-character hex color (e.g. 000000)")
+      .optional(),
+    strokeWidth: z.number().min(0).optional(),
+    tracking: z.number().optional(),
+    leading: z.number().positive().optional(),
+    justification: z.enum(["left", "center", "right"]).optional(),
+
+    // Camera updates
+    zoom: z.number().positive().optional(),
+    depthOfField: z.boolean().optional(),
+    focusDistance: z.number().positive().optional(),
+    aperture: z.number().positive().optional(),
+    blurLevel: z.number().min(0).max(100).optional(),
+
+    // Light updates
+    intensity: z.number().min(0).optional(),
+    lightColor: z
+      .string()
+      .regex(/^[0-9a-fA-F]{6}$/, "Must be a 6-character hex color")
+      .optional(),
+    coneAngle: z.number().min(0).max(180).optional(),
+    coneFeather: z.number().min(0).max(100).optional(),
+    castsShadows: z.boolean().optional(),
+    shadowDarkness: z.number().min(0).max(100).optional(),
+    shadowDiffusion: z.number().min(0).optional(),
+
+    // Layer properties
+    enabled: z.boolean().optional(),
+    shy: z.boolean().optional(),
+    locked: z.boolean().optional(),
+    threeDLayer: z.boolean().optional(),
+    parent: z.string().optional(),
+    blendingMode: BlendingModeSchema,
+
+    // Additional boolean flags
+    solo: z.boolean().optional(),
+    audioEnabled: z.boolean().optional(),
+    motionBlur: z.boolean().optional(),
+    collapseTransformation: z.boolean().optional(),
+    guideLayer: z.boolean().optional(),
+    effectsActive: z.boolean().optional(),
+    timeRemapEnabled: z.boolean().optional(),
+
+    // Quality and rendering
+    quality: QualityModeSchema,
+    samplingQuality: SamplingQualitySchema,
+    autoOrient: AutoOrientSchema,
+    frameBlendingType: FrameBlendingTypeSchema,
+    trackMatteType: TrackMatteTypeSchema,
+
+    // Numeric properties
+    label: z.number().int().min(0).max(16).optional(),
+
+    // Transform/effects/styles
+    transform: TransformSchema,
+    effects: z.array(EffectSchema).optional(),
+    layerStyles: z.array(LayerStyleSchema).optional(),
+    masks: z.array(MaskSchema).optional(),
+    textAnimators: z.array(TextAnimatorSchema).optional(),
+  })
+  .strict()
+  .refine(
+    (layer) => Object.keys(layer).some((k) => k !== "name"),
+    { message: "Layer set entry must include at least one property to update" }
+  );
+
+export type LayerSet = z.infer<typeof LayerSetSchema>;
+
+export const LayerRemoveSchema = z
+  .object({
+    name: z.string().min(1),
+  })
+  .strict();
+
+export type LayerRemove = z.infer<typeof LayerRemoveSchema>;
+
+export const TimelineSetSchema = z
+  .object({
+    layers: z.array(LayerSetSchema).min(1),
+  })
+  .strict();
+
+export const TimelineRemoveSchema = z
+  .object({
+    layers: z.array(LayerRemoveSchema).min(1),
+  })
+  .strict();
+
 // --- Essential Graphics ---
 
 export const EssentialGraphicsItemSchema = z.union([
@@ -774,9 +883,21 @@ export type FolderItem = z.infer<typeof FolderSchema>;
 
 export const TimelineSchema = z
   .object({
-    layers: z.array(LayerSchema).min(1),
+    layers: z.array(LayerSchema).min(1).optional(),
+    set: TimelineSetSchema.optional(),
+    remove: TimelineRemoveSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (timeline) => {
+      return Boolean(
+        (timeline.layers && timeline.layers.length > 0) ||
+        (timeline.set && timeline.set.layers.length > 0) ||
+        (timeline.remove && timeline.remove.layers.length > 0)
+      );
+    },
+    { message: "_timeline must include at least one of: layers, set.layers, remove.layers" }
+  );
 
 export type Timeline = z.infer<typeof TimelineSchema>;
 
@@ -796,7 +917,10 @@ export const CompdownDocumentSchema = z
     (doc) => {
       // Must have at least one section
       return (
-        (doc._timeline && doc._timeline.layers.length > 0) ||
+        (doc._timeline &&
+          ((doc._timeline.layers && doc._timeline.layers.length > 0) ||
+            (doc._timeline.set && doc._timeline.set.layers.length > 0) ||
+            (doc._timeline.remove && doc._timeline.remove.layers.length > 0))) ||
         (doc.folders && doc.folders.length > 0) ||
         (doc.files && doc.files.length > 0) ||
         (doc.compositions && doc.compositions.length > 0)
